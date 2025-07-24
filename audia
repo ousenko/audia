@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Lightning Whisper MLX Audio Transcription Pipeline
+# Convenience wrapper script that automatically activates virtual environment
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Path to virtual environment
+VENV_PATH="$SCRIPT_DIR/venv"
+
+# Path to main Python script
+AUDIA_SCRIPT="$SCRIPT_DIR/audia.py"
+
+# Check if virtual environment exists
+if [ ! -d "$VENV_PATH" ]; then
+    echo "❌ Virtual environment not found at: $VENV_PATH"
+    echo "Please create a virtual environment first:"
+    echo "  python -m venv venv"
+    echo "  source venv/bin/activate"
+    echo "  pip install -r requirements.txt"
+    exit 1
+fi
+
+# Check if audia.py exists
+if [ ! -f "$AUDIA_SCRIPT" ]; then
+    echo "❌ audia.py not found at: $AUDIA_SCRIPT"
+    exit 1
+fi
+
+# Activate virtual environment and run audia.py with all arguments
+source "$VENV_PATH/bin/activate" && python "$AUDIA_SCRIPT" "$@"
+
+# Capture the exit code from audia.py
+EXIT_CODE=$?
+
+# Deactivate virtual environment (optional, happens automatically when script ends)
+# deactivate
+
+# Exit with the same code as audia.py
+exit $EXIT_CODE

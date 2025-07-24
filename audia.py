@@ -40,38 +40,36 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s audio.m4a                          # Basic transcription (medium model)
+  %(prog)s audio.m4a                          # Basic transcription (large-v3 model, 6x real-time)
   %(prog)s audio.m4a -m small                 # Fast transcription (small model, 23x real-time)
   %(prog)s audio.m4a -m medium                # Balanced transcription (medium model, 10x real-time)
-  %(prog)s audio.m4a -m large-v3              # High quality transcription (large-v3 model, 6x real-time)
-  %(prog)s audio.m4a -m large-v3 -l ru        # High accuracy Russian transcription
-  %(prog)s audio.m4a -f formatted             # Output only formatted transcript
+  %(prog)s audio.m4a -l ru                    # High accuracy Russian transcription
+  %(prog)s audio.m4a -f all                   # Output all formats (txt, json, srt)
+  %(prog)s audio.m4a -f srt                   # Output subtitle format
   %(prog)s audio.m4a --batch-size 16          # Use larger batch size for speed
-  %(prog)s audio.m4a --ai-process             # Add AI processing with meeting notes
-  %(prog)s audio.m4a --ai-process --ai-prompt podcast_summary  # AI podcast summary
+  %(prog)s audio.m4a -p meeting_notes        # Add AI processing with meeting notes
+  %(prog)s audio.m4a -p podcast_summary       # AI podcast summary
         """
     )
     
     parser.add_argument("input", nargs='?', help="Input audio file path (M4A, MP3, WAV, etc.)")
     parser.add_argument("-o", "--output", help="Output path (without extension)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
-    parser.add_argument("-m", "--model", default="medium", 
+    parser.add_argument("-m", "--model", default="large-v3", 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
-                       help="Whisper model to use (default: medium). All models support Russian language.")
+                       help="Whisper model to use (default: large-v3). All models support Russian language.")
     parser.add_argument("-l", "--language", help="Language code (e.g., en, ru, es)")
-    parser.add_argument("-f", "--format", default="all",
+    parser.add_argument("-f", "--format", default="txt",
                        choices=["txt", "json", "srt", "formatted", "all"],
-                       help="Output format (default: all)")
+                       help="Output format (default: txt)")
     parser.add_argument("--batch-size", type=int, default=12,
                        help="Batch size for Lightning Whisper MLX processing (default: 12)")
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="Enable verbose logging")
     
     # AI Processing arguments
-    parser.add_argument("--ai-process", action="store_true",
-                       help="Enable AI-powered transcript processing")
-    parser.add_argument("--ai-prompt", default="meeting_notes",
-                       help="AI processing prompt type (default: meeting_notes)")
+    parser.add_argument("-p", "--process", 
+                       help="Enable AI processing with specified prompt (e.g., meeting_notes, podcast_summary)")
     parser.add_argument("--list-prompts", action="store_true",
                        help="List available AI processing prompts")
     
@@ -115,13 +113,13 @@ Examples:
     try:
         # Create Lightning Whisper MLX pipeline
         print("🚀 Using Lightning Whisper MLX for ultra-fast Apple Silicon transcription")
-        if args.ai_process:
-            print(f"🤖 AI processing enabled with prompt: {args.ai_prompt}")
+        if args.process:
+            print(f"🤖 AI processing enabled with prompt: {args.process}")
         
         pipeline = AudioTranscriptionPipeline(
             model_name=args.model,
             batch_size=args.batch_size,
-            enable_ai_processing=args.ai_process
+            enable_ai_processing=bool(args.process)
         )
         
         # Process file
@@ -130,7 +128,7 @@ Examples:
             output_path=str(output_path),
             language=args.language,
             format_type=args.format,
-            ai_prompt_type=args.ai_prompt if args.ai_process else None
+            ai_prompt_type=args.process
         )
         
         # Print summary

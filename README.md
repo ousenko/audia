@@ -9,15 +9,15 @@ An ultra-fast audio transcription pipeline using Lightning Whisper MLX for maxim
 - **Lightning large-v3**: 5.9x real-time speed (24.8s for 147s audio) - **PREMIUM**
 - **Russian language**: Excellent transcription quality with proper formatting
 - **Apple Silicon**: Optimized exclusively for M1/M2/M3 chips
-- **Multiple Output Formats**: TXT, JSON, SRT, formatted transcripts
+- **Multiple Output Formats**: TXT (default), JSON, SRT, formatted transcripts
 
 ## 📊 Speed Comparison
 
 | Method | Model | Speed | Use Case |
 |--------|-------|-------|----------|
 | Lightning MLX | small | **23x real-time** | Quick drafts, maximum speed |
-| Lightning MLX | medium | **10x real-time** | **Recommended** - balanced speed/quality |
-| Standard MLX | large-v3 | 0.6x real-time | Maximum accuracy |
+| Lightning MLX | medium | **10x real-time** | Balanced speed/quality |
+| Lightning MLX | large-v3 | **6x real-time** | **Default** - best quality |
 
 ## 🛠️ Installation
 
@@ -39,21 +39,36 @@ pip install -r requirements.txt
 
 ## 🚀 Quick Start
 
+### Option 1: Convenience Wrapper (Recommended)
+Use the `audia` wrapper script that automatically handles virtual environment:
+
 ```bash
-# Basic transcription (medium model, 10x real-time)
-python audia.py audio.m4a
+# Basic transcription (large-v3 model, 6x real-time)
+./audia audio.m4a
 
 # Maximum speed (small model, 23x real-time)
-python audia.py audio.m4a -m small
+./audia audio.m4a -m small
 
-# Premium quality (large-v3 model, 6x real-time)
-python audia.py audio.m4a -m large-v3
+# Balanced quality/speed (medium model, 10x real-time)
+./audia audio.m4a -m medium
 
 # With AI processing
-python audia.py audio.m4a --ai-process --ai-prompt meeting_notes
+./audia audio.m4a -p meeting_notes
 
 # List available AI prompts
-python audia.py --list-prompts
+./audia --list-prompts
+```
+
+### Option 2: Direct Python Call
+If you prefer to manage virtual environment manually:
+
+```bash
+# Activate virtual environment first
+source venv/bin/activate
+
+# Then use Python directly
+python audia.py audio.m4a
+python audia.py audio.m4a -p meeting_notes
 ```
 
 ## 💻 Usage
@@ -61,68 +76,68 @@ python audia.py --list-prompts
 ### Ultra-Fast Transcription (Lightning MLX)
 
 ```bash
-# Maximum speed - 23x real-time
-
 # Fast transcription (small model - 23x real-time)
-python audia.py audio.m4a -m small
+./audia audio.m4a -m small
 
-# Premium quality (large-v3 model - 6x real-time)
-python audia.py audio.m4a -m large-v3
+# Balanced quality/speed (medium model - 10x real-time)
+./audia audio.m4a -m medium
 
 # Russian language transcription
-python audia.py audio.m4a -l ru
+./audia audio.m4a -l ru
 
-# Custom output format
-python audia.py audio.m4a -f srt
+# Output all formats (txt, json, srt)
+./audia audio.m4a -f all
+
+# Output subtitle format
+./audia audio.m4a -f srt
 
 # Optimize batch size for speed
-python audia.py audio.m4a --batch-size 16
+./audia audio.m4a --batch-size 16
 
 # AI-powered transcript processing
-python audia.py audio.m4a --ai-process --ai-prompt meeting_notes
-python audia.py audio.m4a --ai-process --ai-prompt podcast_summary
+./audia audio.m4a -p meeting_notes
+./audia audio.m4a -p podcast_summary
 ```
 
 ### AI Processing Features
 
 ```bash
 # List available AI prompts
-python audia.py --list-prompts
+./audia --list-prompts
 
-# Basic transcription with AI processing
-python audia.py audio.m4a --ai-process
+# Basic transcription with AI processing (uses default meeting_notes prompt)
+./audia audio.m4a -p meeting_notes
 
 # Use specific AI prompt
-python audia.py audio.m4a --ai-process --ai-prompt podcast_summary
+./audia audio.m4a -p podcast_summary
 
-# Combine with transcription options
-python audia.py audio.m4a -m large-v3 --ai-process --ai-prompt meeting_notes
+# Combine with transcription options (use medium model for speed)
+./audia audio.m4a -m medium -p meeting_notes
 ```
 
 ## 🎯 Common Use Cases
 
 ### Meeting Processing
 1. Record your meeting in any audio format
-2. Run: `python audia.py meeting.m4a --ai-process --ai-prompt meeting_notes`
+2. Run: `./audia meeting.m4a -p meeting_notes`
 3. Get structured notes with participants, topics, decisions, and action items
 
 ### Podcast/Interview Processing
-1. Run: `python audia.py interview.mp3 --ai-process --ai-prompt podcast_summary`
+1. Run: `./audia interview.mp3 -p podcast_summary`
 2. Get summary with key insights and quotes
 
 ### Lecture/Presentation Processing
-1. Run: `python audia.py lecture.wav --ai-process --ai-prompt meeting_notes`
+1. Run: `./audia lecture.wav -p meeting_notes`
 2. Get structured notes and key points
 
 ## ⚙️ Command Line Options
 
 | Parameter | Description | Example |
 |-----------|-------------|----------|
-| `--model` | Whisper model | `--model large-v3` |
-| `--language` | Audio language | `--language ru` |
-| `--format` | Output format | `--format json` |
-| `--ai-process` | Enable AI processing | `--ai-process` |
-| `--ai-prompt` | AI prompt type | `--ai-prompt meeting_notes` |
+| `-m, --model` | Whisper model | `-m large-v3` |
+| `-l, --language` | Audio language | `-l ru` |
+| `-f, --format` | Output format | `-f all` (default: txt) |
+| `-p, --process` | AI processing prompt | `-p meeting_notes` |
 | `--list-prompts` | Show available prompts | `--list-prompts` |
 | `--output-dir` | Output directory | `--output-dir results` |
 | `--batch-size` | Processing batch size | `--batch-size 16` |
@@ -159,8 +174,16 @@ OPENAI_MODEL=your-model-name
 
 ## 📁 Output Files
 
-All output files are saved to the `outputs/` directory by default:
+By default, only a plain text transcript is created. Use `-f all` for multiple formats:
 
+**Default output (txt format):**
+```
+audio.m4a                           # Input file
+outputs/
+└── audio.txt                       # Plain text transcript
+```
+
+**All formats output (`-f all`):**
 ```
 audio.m4a                           # Input file
 outputs/                            # Output directory
@@ -168,7 +191,7 @@ outputs/                            # Output directory
 ├── audio.json                      # JSON with timestamps
 ├── audio.srt                       # Subtitle format
 ├── audio.formatted.txt             # Formatted transcript
-└── audio.meeting_notes.md          # AI-processed notes
+└── audio.meeting_notes.md          # AI-processed notes (with -p)
 ```
 
 ### File Format Details
@@ -183,10 +206,10 @@ outputs/                            # Output directory
 
 ```bash
 # Use different output directory
-python audia.py audio.m4a --output-dir my_results
+./audia audio.m4a --output-dir my_results
 
 # Specify exact output path
-python audia.py audio.m4a -o /path/to/specific/output
+./audia audio.m4a -o /path/to/specific/output
 ```
 
 ## 🎯 Features
@@ -274,7 +297,7 @@ ai_processing:
 ### Meeting Recording Processing
 ```bash
 # Transcription + structured notes
-python audia.py meeting_2024_07_24.m4a --ai-process --ai-prompt meeting_notes
+./audia meeting_2024_07_24.m4a -p meeting_notes
 
 # Result: meeting_2024_07_24.meeting_notes.md
 # Contains: participants, key topics, decisions, action items
@@ -283,7 +306,7 @@ python audia.py meeting_2024_07_24.m4a --ai-process --ai-prompt meeting_notes
 ### Podcast Processing
 ```bash
 # Transcription + summary
-python audia.py podcast_episode_42.mp3 --ai-process --ai-prompt podcast_summary
+./audia podcast_episode_42.mp3 -p podcast_summary
 
 # Result: podcast_episode_42.podcast_summary.md
 # Contains: summary, key insights, notable quotes
@@ -293,7 +316,7 @@ python audia.py podcast_episode_42.mp3 --ai-process --ai-prompt podcast_summary
 ```bash
 # Process multiple files
 for file in *.m4a; do
-    python audia.py "$file" --ai-process --ai-prompt meeting_notes
+    ./audia "$file" -p meeting_notes
 done
 ```
 
@@ -350,10 +373,10 @@ prompts/
 **Usage:**
 ```bash
 # List all available prompts
-python audia.py --list-prompts
+./audia --list-prompts
 
 # Use your custom prompt
-python audia.py audio.m4a --ai-process --ai-prompt your_custom_prompt
+./audia audio.m4a -p your_custom_prompt
 ```
 
 ## 🚨 Requirements
