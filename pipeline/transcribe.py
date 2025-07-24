@@ -5,9 +5,22 @@ Reproduces the functionality of the vibe project for audio transcription.
 
 This pipeline processes M4A audio files and produces clean, formatted transcripts
 using OpenAI's Whisper model with quality similar to the vibe application.
+
+Copyright 2025 Lightning Whisper MLX Audio Transcription Pipeline
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
 
-import argparse
 import os
 import sys
 import logging
@@ -39,11 +52,17 @@ import numpy as np
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 
+# AI Processing
+try:
+    from .process import AIProcessor
+except ImportError:
+    AIProcessor = None
+
 
 class AudioTranscriptionPipeline:
     """Audio transcription pipeline using Lightning Whisper MLX for maximum Apple Silicon performance."""
     
-    def __init__(self, model_name: str = "medium", batch_size: int = 12, quantization: Optional[str] = None):
+    def __init__(self, model_name: str = "medium", batch_size: int = 12, quantization: Optional[str] = None, enable_ai_processing: bool = False):
         """
         Initialize the Lightning Whisper MLX transcription pipeline.
         
@@ -51,6 +70,7 @@ class AudioTranscriptionPipeline:
             model_name: Whisper model to use (tiny, base, small, medium, large, large-v2, large-v3)
             batch_size: Batch size for Lightning processing (default: 12)
             quantization: Quantization level (None, '4bit', '8bit') - None for best compatibility
+            enable_ai_processing: Enable AI-powered transcript processing
         """
         self.model_name = model_name
         self.batch_size = batch_size
@@ -58,12 +78,23 @@ class AudioTranscriptionPipeline:
         self.model = None
         self.sample_rate = 16000  # Whisper's expected sample rate
         
-        # Configure logging
+        # Configure logging first
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
+        
+        # AI Processing
+        self.enable_ai_processing = enable_ai_processing
+        self.ai_processor = None
+        if enable_ai_processing and AIProcessor:
+            try:
+                self.ai_processor = AIProcessor()
+                self.logger.info("AI processor initialized")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize AI processor: {e}")
+                self.enable_ai_processing = False
         
     def load_model(self) -> None:
         """Load the Lightning Whisper MLX model."""
@@ -455,7 +486,7 @@ class AudioTranscriptionPipeline:
         seconds = int(seconds % 60)
         return f"{minutes:02d}:{seconds:02d}"
     
-    def save_results(self, result: Dict, output_path: str, format_type: str = "all") -> None:
+    def save_results(self, result: Dict, output_path: str, format_type: str = "all", ai_prompt_type: Optional[str] = None) -> None:
         """
         Save transcription results to file(s).
         
@@ -463,6 +494,7 @@ class AudioTranscriptionPipeline:
             result: Processed transcription result
             output_path: Base output path (without extension)
             format_type: Output format ('txt', 'json', 'srt', 'all')
+            ai_prompt_type: AI processing prompt type (meeting_notes, podcast_summary, etc.)
         """
         try:
             self.logger.info(f"Saving results to {output_path}")
@@ -498,6 +530,25 @@ class AudioTranscriptionPipeline:
                 with open(formatted_path, "w", encoding="utf-8") as f:
                     f.write(result["formatted_transcript"])
                 self.logger.info(f"Formatted transcript saved to {formatted_path}")
+            
+            # AI Processing
+            if ai_prompt_type and self.enable_ai_processing and self.ai_processor:
+                try:
+                    self.logger.info(f"Processing transcript with AI using prompt: {ai_prompt_type}")
+                    
+                    # Use the plain text for AI processing
+                    transcript_text = result["text"]
+                    ai_result = self.ai_processor.process_transcript(transcript_text, ai_prompt_type)
+                    
+                    # Save AI processed result
+                    ai_path = base_path.with_suffix(f".{ai_prompt_type}.md")
+                    with open(ai_path, "w", encoding="utf-8") as f:
+                        f.write(ai_result)
+                    self.logger.info(f"AI processed result saved to {ai_path}")
+                    
+                except Exception as e:
+                    self.logger.error(f"AI processing failed: {e}")
+                    # Don't raise - continue with regular transcription
                 
         except Exception as e:
             self.logger.error(f"Failed to save results: {e}")
@@ -548,7 +599,7 @@ class AudioTranscriptionPipeline:
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millisecs:03d}"
     
     def process_file(self, input_path: str, output_path: str, language: Optional[str] = None, 
-                    format_type: str = "all") -> Dict:
+                    format_type: str = "all", ai_prompt_type: Optional[str] = None) -> Dict:
         """
         Process a single audio file through the complete pipeline.
         
@@ -557,6 +608,7 @@ class AudioTranscriptionPipeline:
             output_path: Base path for output files
             language: Language code or None for auto-detection
             format_type: Output format type
+            ai_prompt_type: AI processing prompt type
             
         Returns:
             Processed transcription result
@@ -583,7 +635,7 @@ class AudioTranscriptionPipeline:
                 processed_result = self.post_process_transcript(result)
                 
                 # Save results
-                self.save_results(processed_result, output_path, format_type)
+                self.save_results(processed_result, output_path, format_type, ai_prompt_type)
                 
                 self.logger.info("File processing completed successfully")
                 return processed_result
@@ -598,81 +650,4 @@ class AudioTranscriptionPipeline:
             raise
 
 
-def main():
-    """Main CLI interface."""
-    parser = argparse.ArgumentParser(
-        description="Lightning Whisper MLX Audio Transcription Pipeline - Ultra-fast Apple Silicon transcription",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s audio.m4a                          # Basic transcription (medium model)
-  %(prog)s audio.m4a -m small                 # Fast transcription (small model, 23x real-time)
-  %(prog)s audio.m4a -m medium                # Balanced transcription (medium model, 10x real-time)
-  %(prog)s audio.m4a -m large-v3              # High quality transcription (large-v3 model, 6x real-time)
-  %(prog)s audio.m4a -m large-v3 -l ru        # High accuracy Russian transcription
-  %(prog)s audio.m4a -f formatted             # Output only formatted transcript
-  %(prog)s audio.m4a --batch-size 16          # Use larger batch size for speed
-        """
-    )
-    
-    parser.add_argument("input", help="Input audio file path (M4A, MP3, WAV, etc.)")
-    parser.add_argument("-o", "--output", help="Output path (without extension)")
-    parser.add_argument("-m", "--model", default="medium", 
-                       choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
-                       help="Whisper model to use (default: medium). All models support Russian language.")
-    parser.add_argument("-l", "--language", help="Language code (e.g., en, ru, es)")
-    parser.add_argument("-f", "--format", default="all",
-                       choices=["txt", "json", "srt", "formatted", "all"],
-                       help="Output format (default: all)")
-    parser.add_argument("--batch-size", type=int, default=12,
-                       help="Batch size for Lightning Whisper MLX processing (default: 12)")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                       help="Enable verbose logging")
-    
-    args = parser.parse_args()
-    
-    # Set logging level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    # Determine output path
-    if args.output:
-        output_path = args.output
-    else:
-        input_path = Path(args.input)
-        output_path = input_path.parent / input_path.stem
-    
-    try:
-        # Create Lightning Whisper MLX pipeline
-        print("🚀 Using Lightning Whisper MLX for ultra-fast Apple Silicon transcription")
-        pipeline = AudioTranscriptionPipeline(
-            model_name=args.model,
-            batch_size=args.batch_size
-        )
-        
-        # Process file
-        result = pipeline.process_file(
-            input_path=args.input,
-            output_path=str(output_path),
-            language=args.language,
-            format_type=args.format
-        )
-        
-        # Print summary
-        print(f"\n✅ Transcription completed successfully!")
-        print(f"📁 Input: {args.input}")
-        print(f"📄 Output: {output_path}.*")
-        print(f"🌍 Language: {result.get('language', 'auto-detected')}")
-        print(f"⏱️  Duration: {result.get('duration', 0):.1f} seconds")
-        print(f"📝 Text length: {len(result.get('text', ''))} characters")
-        
-    except KeyboardInterrupt:
-        print("\n❌ Operation cancelled by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        sys.exit(1)
 
-
-if __name__ == "__main__":
-    main()

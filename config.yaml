@@ -1,0 +1,30 @@
+# Audio Transcription & AI Processing Configuration
+
+# Lightning Whisper MLX Settings
+transcription:
+  default_model: "medium"  # small, medium, large-v3
+  default_language: "auto"  # auto, ru, en, etc.
+  batch_size: 8
+  quantization: false
+
+# AI Processing Configuration
+ai_processing:
+  # API settings are loaded from .env file:
+  # OPENAI_API_URL, OPENAI_API_KEY, OPENAI_MODEL
+  
+  # Processing settings (can be overridden in .env)
+  temperature: 0.3
+  max_tokens: 4000
+  timeout: 60
+
+# Output Settings
+output:
+  default_format: "all"  # txt, json, srt, formatted, all
+  include_timestamps: true
+  create_summary: true
+  
+# Processing Options
+processing:
+  default_prompt_type: "meeting_notes"  # meeting_notes, podcast_summary, custom
+  custom_prompt_file: ""  # path to custom prompt file
+  chunk_size: 8000  # characters per chunk for long transcripts
