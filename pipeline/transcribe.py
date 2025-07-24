@@ -165,16 +165,16 @@ class AudioTranscriptionPipeline:
             Path to preprocessed audio file
         """
         try:
-            self.logger.info("Preprocessing audio")
+            self.logger.debug("Preprocessing audio")
             
             # Check if audio already meets vibe specifications
             if self._should_normalize(audio_path):
                 # Create normalized audio using FFmpeg with vibe's exact settings
                 normalized_path = self._create_normalized_audio(audio_path)
-                self.logger.info("Audio preprocessing completed")
+                self.logger.debug("Audio preprocessing completed")
                 return normalized_path
             else:
-                self.logger.info("Audio already in correct format")
+                self.logger.debug("Audio already in correct format")
                 return audio_path
             
         except Exception as e:
@@ -420,12 +420,12 @@ class AudioTranscriptionPipeline:
             overlap_duration = 5.0  # 5 seconds overlap
             step_duration = chunk_duration - overlap_duration  # 25 seconds step
             
-            print(f"\n🎵 Аудио файл: {Path(audio_path).name}")
-            print(f"⏱️  Длительность: {total_duration:.1f} секунд")
-            print(f"🧠 Модель: {self.model_name}")
-            print(f"🌍 Язык: {language or 'ru (по умолчанию)'}")
-            print(f"📦 Чанки: {chunk_duration:.0f}с с перекрытием {overlap_duration:.0f}с")
-            print("\n🚀 Начинаем потоковую транскрипцию...\n")
+            print(f"\n🎵 Audio file: {os.path.basename(audio_path)}")
+            print(f"⏱️  Duration: {total_duration:.1f} seconds")
+            print(f"🧠 Model: {self.model_name}")
+            print(f"🌍 Language: {language or 'auto'}")
+            print(f"📦 Chunks: {chunk_duration:.0f}s with {overlap_duration:.0f}s overlap")
+            print("\n🚀 Starting streaming transcription...\n")
             
             # Prepare live output file
             live_output_file = None
@@ -450,7 +450,7 @@ class AudioTranscriptionPipeline:
                 chunk_end = min(current_time + chunk_duration, total_duration)
                 actual_duration = chunk_end - current_time
                 
-                print(f"📦 Обрабатываем чанк {chunk_count}: {current_time:.1f}s - {chunk_end:.1f}s")
+                self.logger.debug(f"📦 Processing chunk {chunk_count}: {current_time:.1f}s - {chunk_end:.1f}s")
                 
                 # Create temporary chunk file
                 with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_chunk:
@@ -462,7 +462,7 @@ class AudioTranscriptionPipeline:
                     
                     # Check if chunk is mostly silent
                     if self._detect_silence_in_chunk(chunk_path):
-                        print(f"🔇 Чанк {chunk_count} в основном тишина - пропускаем")
+                        self.logger.debug(f"🔇 Chunk {chunk_count} is mostly silent - skipping")
                         skipped_chunks += 1
                         # Clean up chunk file before continuing
                         if os.path.exists(chunk_path):
@@ -489,7 +489,7 @@ class AudioTranscriptionPipeline:
                                 if self._is_hallucination(adjusted_segment["text"]):
                                     filtered_segments += 1
                                     timestamp = f"[{adjusted_segment['start']:.1f}s]"
-                                    print(f"🚫 {timestamp} Отфильтровано (галлюцинация): {adjusted_segment['text'][:50]}...")
+                                    self.logger.debug(f"🚫 {timestamp} Filtered (hallucination): {adjusted_segment['text'][:50]}...")
                                     continue
                                 
                                 all_segments.append(adjusted_segment)
@@ -526,14 +526,14 @@ class AudioTranscriptionPipeline:
             }
             
             print("\n" + "-" * 50)
-            print(f"\n📊 Статистика потоковой транскрипции:")
-            print(f"   • Чанков всего: {chunk_count}")
-            print(f"   • Обработано: {chunk_count - skipped_chunks}")
-            print(f"   • Пропущено (тишина): {skipped_chunks}")
-            print(f"   • Сегментов всего: {len(all_segments) + filtered_segments}")
-            print(f"   • Принято: {len(all_segments)}")
-            print(f"   • Отфильтровано (галлюцинации): {filtered_segments}")
-            print(f"   • Общий текст: {len(combined_result['text'])} символов")
+            print(f"\n📊 Streaming transcription statistics:")
+            print(f"   • Total chunks: {chunk_count}")
+            print(f"   • Processed: {chunk_count - skipped_chunks}")
+            print(f"   • Skipped (silence): {skipped_chunks}")
+            print(f"   • Total segments: {len(all_segments) + filtered_segments}")
+            print(f"   • Accepted: {len(all_segments)}")
+            print(f"   • Filtered (hallucinations): {filtered_segments}")
+            print(f"   • Total text: {len(combined_result['text'])} characters")
             
             self.logger.info("Chunked transcription completed")
             return combined_result
@@ -558,7 +558,7 @@ class AudioTranscriptionPipeline:
             if self.model is None:
                 self.load_model()
             
-            self.logger.info(f"Transcribing audio with Lightning Whisper MLX: {audio_path}")
+            self.logger.debug(f"Transcribing audio with Lightning Whisper MLX: {audio_path}")
             
             # Preprocess audio to match vibe's specifications
             normalized_audio_path = self.preprocess_audio(audio_path)
@@ -584,7 +584,7 @@ class AudioTranscriptionPipeline:
                                 })
                         result["segments"] = converted_segments
                 
-                self.logger.info("Lightning Whisper MLX transcription completed")
+                self.logger.debug("Lightning Whisper MLX transcription completed")
                 return result
                 
             finally:
