@@ -23,7 +23,16 @@ limitations under the License.
 import argparse
 import sys
 import logging
+import os
 from pathlib import Path
+
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import dotenv_values
+    env_vars = dotenv_values('.env')
+except ImportError:
+    # dotenv is optional
+    env_vars = {}
 
 # Import our modules
 try:
@@ -54,6 +63,7 @@ Use Cases:
   %(prog)s audio.m4a -p meeting_notes         # Meeting notes generation
   %(prog)s audio.m4a -p podcast_summary       # Podcast summary generation
   %(prog)s audio.m4a -m medium -p meeting_notes  # Faster transcription + AI processing
+
         """
     )
     
@@ -71,6 +81,8 @@ Use Cases:
                        help="Batch size for Lightning Whisper MLX processing (default: 12)")
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="Enable verbose logging")
+    parser.add_argument("--no-ssl-verify", action="store_true",
+                       help="Disable SSL verification for model downloads (for corporate environments). Can also set AUDIA_NO_SSL_VERIFY=true in .env file")
     
     # AI Processing arguments
     parser.add_argument("-p", "--process", 
@@ -79,6 +91,11 @@ Use Cases:
                        help="List available AI processing prompts")
     
     args = parser.parse_args()
+    
+    # Check for SSL verification settings (.env file overrides command line)
+    no_ssl_verify = args.no_ssl_verify
+    if env_vars.get('AUDIA_NO_SSL_VERIFY', '').lower() in ('true', '1', 'yes'):
+        no_ssl_verify = True
     
     # Handle list prompts command
     if args.list_prompts:
@@ -129,7 +146,8 @@ Use Cases:
         pipeline = AudioTranscriptionPipeline(
             model_name=args.model,
             batch_size=args.batch_size,
-            enable_ai_processing=bool(args.process)
+            enable_ai_processing=bool(args.process),
+            verify_ssl=not no_ssl_verify
         )
         
         # Process file

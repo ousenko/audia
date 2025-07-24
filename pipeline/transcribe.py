@@ -32,6 +32,8 @@ from typing import Dict, List, Optional, Tuple, Union
 import tempfile
 import subprocess
 import math
+import ssl
+import requests
 
 # Lightning Whisper MLX - ultra-fast Apple Silicon optimization
 try:
@@ -64,7 +66,7 @@ except ImportError:
 class AudioTranscriptionPipeline:
     """Audio transcription pipeline using Lightning Whisper MLX for maximum Apple Silicon performance."""
     
-    def __init__(self, model_name: str = "medium", batch_size: int = 12, quantization: Optional[str] = None, enable_ai_processing: bool = False):
+    def __init__(self, model_name: str = "medium", batch_size: int = 12, quantization: Optional[str] = None, enable_ai_processing: bool = False, verify_ssl: bool = True):
         """
         Initialize the Lightning Whisper MLX transcription pipeline.
         
@@ -73,10 +75,12 @@ class AudioTranscriptionPipeline:
             batch_size: Batch size for Lightning processing (default: 12)
             quantization: Quantization level (None, '4bit', '8bit') - None for best compatibility
             enable_ai_processing: Enable AI-powered transcript processing
+            verify_ssl: Enable SSL verification for model downloads (default: True)
         """
         self.model_name = model_name
         self.batch_size = batch_size
         self.quantization = quantization
+        self.verify_ssl = verify_ssl
         self.model = None
         self.sample_rate = 16000  # Whisper's expected sample rate
         
@@ -103,6 +107,19 @@ class AudioTranscriptionPipeline:
         if self.model is None:
             self.logger.info(f"Loading Lightning Whisper MLX model '{self.model_name}'")
             self.logger.info("Using Lightning Whisper MLX for ultra-fast Apple Silicon performance")
+            
+            # Configure SSL for model downloads
+            if not self.verify_ssl:
+                self.logger.warning("SSL verification disabled for model downloads - this is insecure!")
+                # Disable SSL verification globally for requests
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                # Set environment variable for requests
+                import os
+                os.environ['CURL_CA_BUNDLE'] = ''
+                os.environ['REQUESTS_CA_BUNDLE'] = ''
+                # Configure SSL context
+                ssl._create_default_https_context = ssl._create_unverified_context
             
             try:
                 # Initialize Lightning Whisper MLX with optimized settings
