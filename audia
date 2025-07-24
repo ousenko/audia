@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Lightning Whisper MLX Audio Transcription Pipeline
+# audia - Audia - Ultra-fast Apple Silicon audio transcription
 # Convenience wrapper script that automatically activates virtual environment
 
 # Get the directory where this script is located

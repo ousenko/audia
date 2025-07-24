@@ -5,7 +5,7 @@ Audia - Lightning Fast Audio Transcription and AI Processing
 Main CLI entry point for the Lightning Whisper MLX transcription pipeline
 with optional AI-powered transcript processing.
 
-Copyright 2025 Lightning Whisper MLX Audio Transcription Pipeline
+Copyright 2025 Andrew Ousenko
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,19 +36,23 @@ except ImportError as e:
 def main():
     """Main CLI interface."""
     parser = argparse.ArgumentParser(
-        description="Audia - Lightning Whisper MLX Audio Transcription Pipeline - Ultra-fast Apple Silicon transcription",
+        description="Audia - Ultra-fast Apple Silicon audio transcription",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  %(prog)s audio.m4a                          # Basic transcription (large-v3 model, 6x real-time)
+Use Cases:
+
+1. TRANSCRIPTION ONLY:
+  %(prog)s audio.m4a                          # Basic Russian transcription (large-v3 model)
   %(prog)s audio.m4a -m small                 # Fast transcription (small model, 23x real-time)
   %(prog)s audio.m4a -m medium                # Balanced transcription (medium model, 10x real-time)
-  %(prog)s audio.m4a -l ru                    # High accuracy Russian transcription
+  %(prog)s audio.m4a -l en                    # English transcription
   %(prog)s audio.m4a -f all                   # Output all formats (txt, json, srt)
   %(prog)s audio.m4a -f srt                   # Output subtitle format
-  %(prog)s audio.m4a --batch-size 16          # Use larger batch size for speed
-  %(prog)s audio.m4a -p meeting_notes        # Add AI processing with meeting notes
-  %(prog)s audio.m4a -p podcast_summary       # AI podcast summary
+
+2. TRANSCRIPTION + AI PROCESSING:
+  %(prog)s audio.m4a -p meeting_notes         # Meeting notes generation
+  %(prog)s audio.m4a -p podcast_summary       # Podcast summary generation
+  %(prog)s audio.m4a -m medium -p meeting_notes  # Faster transcription + AI processing
         """
     )
     
@@ -58,7 +62,7 @@ Examples:
     parser.add_argument("-m", "--model", default="large-v3", 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
                        help="Whisper model to use (default: large-v3). All models support Russian language.")
-    parser.add_argument("-l", "--language", help="Language code (e.g., en, ru, es)")
+    parser.add_argument("-l", "--language", default="ru", help="Language code (default: ru). Supports en, ru, es, etc.")
     parser.add_argument("-f", "--format", default="txt",
                        choices=["txt", "json", "srt", "formatted", "all"],
                        help="Output format (default: txt)")

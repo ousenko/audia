@@ -1,4 +1,4 @@
-# ⚡ Lightning Whisper MLX Audio Transcription Pipeline
+# ⚡ audia
 
 An ultra-fast audio transcription pipeline using Lightning Whisper MLX for maximum Apple Silicon performance. Achieves 6-23x real-time transcription speed while maintaining excellent quality.
 
@@ -43,20 +43,14 @@ pip install -r requirements.txt
 Use the `audia` wrapper script that automatically handles virtual environment:
 
 ```bash
-# Basic transcription (large-v3 model, 6x real-time)
-./audia audio.m4a
+# Use Case 1: Transcription Only
+./audia audio.m4a                    # Basic Russian transcription
+./audia audio.m4a -m small           # Fast transcription (23x real-time)
+./audia audio.m4a -l en              # English transcription
 
-# Maximum speed (small model, 23x real-time)
-./audia audio.m4a -m small
-
-# Balanced quality/speed (medium model, 10x real-time)
-./audia audio.m4a -m medium
-
-# With AI processing
-./audia audio.m4a -p meeting_notes
-
-# List available AI prompts
-./audia --list-prompts
+# Use Case 2: Transcription + AI Processing
+./audia audio.m4a -p meeting_notes   # Meeting notes generation
+./audia --list-prompts               # List available AI prompts
 ```
 
 ### Option 2: Direct Python Call
@@ -66,76 +60,60 @@ If you prefer to manage virtual environment manually:
 # Activate virtual environment first
 source venv/bin/activate
 
-# Then use Python directly
+# Use Case 1: Transcription Only
 python audia.py audio.m4a
+
+# Use Case 2: Transcription + AI Processing
 python audia.py audio.m4a -p meeting_notes
 ```
 
 ## 💻 Usage
 
-### Ultra-Fast Transcription (Lightning MLX)
+### Use Case 1: Transcription Only
 
 ```bash
+# Basic Russian transcription (large-v3 model, 6x real-time)
+./audia audio.m4a
+
 # Fast transcription (small model - 23x real-time)
 ./audia audio.m4a -m small
 
 # Balanced quality/speed (medium model - 10x real-time)
 ./audia audio.m4a -m medium
 
-# Russian language transcription
-./audia audio.m4a -l ru
+# English language transcription
+./audia audio.m4a -l en
 
 # Output all formats (txt, json, srt)
 ./audia audio.m4a -f all
 
 # Output subtitle format
 ./audia audio.m4a -f srt
-
-# Optimize batch size for speed
-./audia audio.m4a --batch-size 16
-
-# AI-powered transcript processing
-./audia audio.m4a -p meeting_notes
-./audia audio.m4a -p podcast_summary
 ```
 
-### AI Processing Features
+### Use Case 2: Transcription + AI Processing
 
 ```bash
-# List available AI prompts
-./audia --list-prompts
-
-# Basic transcription with AI processing (uses default meeting_notes prompt)
+# Meeting notes generation
 ./audia audio.m4a -p meeting_notes
 
-# Use specific AI prompt
+# Podcast summary generation
 ./audia audio.m4a -p podcast_summary
 
-# Combine with transcription options (use medium model for speed)
+# Faster transcription + AI processing
 ./audia audio.m4a -m medium -p meeting_notes
+
+# List available AI prompts
+./audia --list-prompts
 ```
 
-## 🎯 Common Use Cases
-
-### Meeting Processing
-1. Record your meeting in any audio format
-2. Run: `./audia meeting.m4a -p meeting_notes`
-3. Get structured notes with participants, topics, decisions, and action items
-
-### Podcast/Interview Processing
-1. Run: `./audia interview.mp3 -p podcast_summary`
-2. Get summary with key insights and quotes
-
-### Lecture/Presentation Processing
-1. Run: `./audia lecture.wav -p meeting_notes`
-2. Get structured notes and key points
 
 ## ⚙️ Command Line Options
 
 | Parameter | Description | Example |
 |-----------|-------------|----------|
 | `-m, --model` | Whisper model | `-m large-v3` |
-| `-l, --language` | Audio language | `-l ru` |
+| `-l, --language` | Audio language | `-l en` (default: ru) |
 | `-f, --format` | Output format | `-f all` (default: txt) |
 | `-p, --process` | AI processing prompt | `-p meeting_notes` |
 | `--list-prompts` | Show available prompts | `--list-prompts` |
@@ -151,48 +129,16 @@ python audia.py audio.m4a -p meeting_notes
 cp .env.example .env
 ```
 
-**For OpenAI:**
 ```env
 OPENAI_API_URL=https://api.openai.com/v1/chat/completions
 OPENAI_API_KEY=sk-your-openai-key-here
 OPENAI_MODEL=gpt-4o-mini
 ```
 
-**For X.AI (Grok):**
-```env
-OPENAI_API_URL=https://api.x.ai/v1/chat/completions
-OPENAI_API_KEY=xai-your-xai-key-here
-OPENAI_MODEL=grok-beta
-```
-
-**For other OpenAI-compatible APIs:**
-```env
-OPENAI_API_URL=https://your-api.com/v1/chat/completions
-OPENAI_API_KEY=your-key-here
-OPENAI_MODEL=your-model-name
-```
-
 ## 📁 Output Files
 
 By default, only a plain text transcript is created. Use `-f all` for multiple formats:
 
-**Default output (txt format):**
-```
-audio.m4a                           # Input file
-outputs/
-└── audio.txt                       # Plain text transcript
-```
-
-**All formats output (`-f all`):**
-```
-audio.m4a                           # Input file
-outputs/                            # Output directory
-├── audio.txt                       # Plain text transcript
-├── audio.json                      # JSON with timestamps
-├── audio.srt                       # Subtitle format
-├── audio.formatted.txt             # Formatted transcript
-└── audio.meeting_notes.md          # AI-processed notes (with -p)
-```
 
 ### File Format Details
 
@@ -266,20 +212,6 @@ Optimized for Russian language but supports all Whisper languages:
 
 ## 🤖 AI Processing Setup
 
-To use AI-powered transcript processing, you need to configure an OpenAI-compatible API:
-
-### 1. Set Environment Variables
-
-```bash
-# Set your OpenAI API key (required)
-export OPENAI_API_KEY="your-api-key-here"
-
-# Set custom API URL (optional, defaults to OpenAI)
-export OPENAI_API_URL="https://api.openai.com/v1/chat/completions"
-```
-
-### 2. Configure API Settings (Optional)
-
 Edit `config.yaml` to customize AI processing:
 
 ```yaml
@@ -291,73 +223,6 @@ ai_processing:
   max_tokens: 4000
   timeout: 60
 ```
-
-## 📚 Practical Examples
-
-### Meeting Recording Processing
-```bash
-# Transcription + structured notes
-./audia meeting_2024_07_24.m4a -p meeting_notes
-
-# Result: meeting_2024_07_24.meeting_notes.md
-# Contains: participants, key topics, decisions, action items
-```
-
-### Podcast Processing
-```bash
-# Transcription + summary
-./audia podcast_episode_42.mp3 -p podcast_summary
-
-# Result: podcast_episode_42.podcast_summary.md
-# Contains: summary, key insights, notable quotes
-```
-
-### Batch Processing
-```bash
-# Process multiple files
-for file in *.m4a; do
-    ./audia "$file" -p meeting_notes
-done
-```
-
-## 🔍 Troubleshooting
-
-### "API key not found" Error
-- Check your `.env` file exists and contains `OPENAI_API_KEY`
-- Ensure the key is valid and has sufficient credits
-- Verify the API URL matches your provider
-
-### "Model not found" Error
-- Check the model name in your `.env` file
-- For X.AI use `grok-beta` or `grok-2`
-- For OpenAI use `gpt-4o-mini` or `gpt-4`
-
-### Slow Processing
-- Use `medium` model instead of `large-v3` for faster processing
-- Specify language with `--language ru` for better performance
-- Increase batch size with `--batch-size 16`
-
-### Poor Transcription Quality
-- Use `large-v3` model for maximum accuracy
-- Ensure good audio quality (clear speech, minimal background noise)
-- Specify the correct language code
-
-## 💡 Tips & Best Practices
-
-### Performance Optimization
-- **small model**: Maximum speed (23x real-time) for quick drafts
-- **medium model**: Balanced speed/quality (10x real-time) - recommended
-- **large-v3 model**: Maximum accuracy (6x real-time) for important content
-
-### AI Processing Quality
-- Long transcripts are automatically chunked for processing
-- Results are synthesized into a unified report
-- Create custom prompts in the `prompts/` directory
-
-### Security
-- API keys are stored in `.env` file (excluded from git)
-- Never commit your `.env` file to version control
-- Use `.env.example` as a template
 
 ### Custom Prompts
 
@@ -386,14 +251,6 @@ prompts/
 - **Python**: 3.8+
 - **Dependencies**: MLX, Lightning Whisper MLX, FFmpeg
 
-## 🤝 Contributing
-
-This pipeline is designed to match and exceed vibe application performance on Apple Silicon. Contributions welcome for:
-
-- Additional model optimizations
-- Core ML integration
-- Batch processing improvements
-- New output formats
 
 ## 📄 License
 
@@ -401,7 +258,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ### Apache License 2.0
 
-Copyright 2025 Lightning Whisper MLX Audio Transcription Pipeline
+Copyright 2025 Andrew Ousenko
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -414,7 +271,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
----
-
-**Achieving vibe-level transcription performance with 10-23x real-time speed on Apple Silicon** 🚀

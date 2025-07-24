@@ -6,7 +6,7 @@ Reproduces the functionality of the vibe project for audio transcription.
 This pipeline processes M4A audio files and produces clean, formatted transcripts
 using OpenAI's Whisper model with quality similar to the vibe application.
 
-Copyright 2025 Lightning Whisper MLX Audio Transcription Pipeline
+Copyright 2025 Andrew Ousenko
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
