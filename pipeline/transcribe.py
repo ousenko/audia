@@ -111,30 +111,43 @@ class AudioTranscriptionPipeline:
             # Configure SSL for model downloads
             if not self.verify_ssl:
                 self.logger.warning("SSL verification disabled for model downloads - this is insecure!")
-                # Monkey patch requests.Session to disable SSL verification
-                import urllib3
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                 
-                # Store original Session.request method
-                original_request = requests.Session.request
-                
-                def patched_request(self, method, url, **kwargs):
-                    # Force verify=False for all requests
-                    kwargs['verify'] = False
-                    return original_request(self, method, url, **kwargs)
-                
-                # Apply the monkey patch
-                requests.Session.request = patched_request
-                self.logger.info("Applied SSL verification bypass patch to requests.Session")
-                
-                # Also set environment variables as fallback
-                import os
-                os.environ['PYTHONHTTPSVERIFY'] = '0'
-                os.environ['CURL_CA_BUNDLE'] = ''
-                os.environ['REQUESTS_CA_BUNDLE'] = ''
-                
-                # Configure SSL context
-                ssl._create_default_https_context = ssl._create_unverified_context
+                try:
+                    from huggingface_hub import configure_http_backend
+                    import urllib3
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    
+                    # Create SSL context with relaxed verification rules
+                    # This solves 'Basic Constraints not critical' error
+                    custom_ssl_context = ssl.create_default_context()
+                    custom_ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+                    custom_ssl_context.check_hostname = False
+                    custom_ssl_context.verify_mode = ssl.CERT_NONE
+                    
+                    # Create custom HTTP adapter with our SSL context
+                    class CustomHttpAdapter(requests.adapters.HTTPAdapter):
+                        def init_poolmanager(self, *args, **kwargs):
+                            kwargs['ssl_context'] = custom_ssl_context
+                            super().init_poolmanager(*args, **kwargs)
+                        
+                        def proxy_manager_for(self, *args, **kwargs):
+                            kwargs['ssl_context'] = custom_ssl_context
+                            return super().proxy_manager_for(*args, **kwargs)
+                    
+                    # Create session factory that uses our custom adapter
+                    def backend_factory() -> requests.Session:
+                        session = requests.Session()
+                        session.mount("https://", CustomHttpAdapter())
+                        return session
+                    
+                    # Configure huggingface_hub to use our custom backend
+                    configure_http_backend(backend_factory=backend_factory)
+                    self.logger.info("Configured huggingface_hub with custom SSL context for corporate environments")
+                    
+                except ImportError:
+                    self.logger.warning("Could not configure huggingface_hub SSL settings - using fallback method")
+                    # Fallback: global SSL context override
+                    ssl._create_default_https_context = ssl._create_unverified_context
             
             try:
                 # Initialize Lightning Whisper MLX with optimized settings
