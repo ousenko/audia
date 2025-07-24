@@ -111,25 +111,30 @@ class AudioTranscriptionPipeline:
             # Configure SSL for model downloads
             if not self.verify_ssl:
                 self.logger.warning("SSL verification disabled for model downloads - this is insecure!")
-                # Configure huggingface_hub to disable SSL verification
-                try:
-                    from huggingface_hub import configure_http_backend
-                    import urllib3
-                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                    
-                    def backend_factory() -> requests.Session:
-                        session = requests.Session()
-                        session.verify = False
-                        return session
-                    
-                    configure_http_backend(backend_factory=backend_factory)
-                    self.logger.info("Configured huggingface_hub to disable SSL verification")
-                except ImportError:
-                    self.logger.warning("Could not configure huggingface_hub SSL settings - using fallback method")
-                    # Fallback: set environment variables
-                    import os
-                    os.environ['CURL_CA_BUNDLE'] = ''
-                    os.environ['REQUESTS_CA_BUNDLE'] = ''
+                # Monkey patch requests.Session to disable SSL verification
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                
+                # Store original Session.request method
+                original_request = requests.Session.request
+                
+                def patched_request(self, method, url, **kwargs):
+                    # Force verify=False for all requests
+                    kwargs['verify'] = False
+                    return original_request(self, method, url, **kwargs)
+                
+                # Apply the monkey patch
+                requests.Session.request = patched_request
+                self.logger.info("Applied SSL verification bypass patch to requests.Session")
+                
+                # Also set environment variables as fallback
+                import os
+                os.environ['PYTHONHTTPSVERIFY'] = '0'
+                os.environ['CURL_CA_BUNDLE'] = ''
+                os.environ['REQUESTS_CA_BUNDLE'] = ''
+                
+                # Configure SSL context
+                ssl._create_default_https_context = ssl._create_unverified_context
             
             try:
                 # Initialize Lightning Whisper MLX with optimized settings
