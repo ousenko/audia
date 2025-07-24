@@ -21,6 +21,8 @@ outputs/*
 !QUICKSTART.md
 !ARCHITECTURE.md
 !*.example.md
+# Exclude example prompt files from ignore
+!prompts/example-*.txt
 
 # Python cache
 __pycache__/
