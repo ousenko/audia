@@ -111,15 +111,25 @@ class AudioTranscriptionPipeline:
             # Configure SSL for model downloads
             if not self.verify_ssl:
                 self.logger.warning("SSL verification disabled for model downloads - this is insecure!")
-                # Disable SSL verification globally for requests
-                import urllib3
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                # Set environment variable for requests
-                import os
-                os.environ['CURL_CA_BUNDLE'] = ''
-                os.environ['REQUESTS_CA_BUNDLE'] = ''
-                # Configure SSL context
-                ssl._create_default_https_context = ssl._create_unverified_context
+                # Configure huggingface_hub to disable SSL verification
+                try:
+                    from huggingface_hub import configure_http_backend
+                    import urllib3
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    
+                    def backend_factory() -> requests.Session:
+                        session = requests.Session()
+                        session.verify = False
+                        return session
+                    
+                    configure_http_backend(backend_factory=backend_factory)
+                    self.logger.info("Configured huggingface_hub to disable SSL verification")
+                except ImportError:
+                    self.logger.warning("Could not configure huggingface_hub SSL settings - using fallback method")
+                    # Fallback: set environment variables
+                    import os
+                    os.environ['CURL_CA_BUNDLE'] = ''
+                    os.environ['REQUESTS_CA_BUNDLE'] = ''
             
             try:
                 # Initialize Lightning Whisper MLX with optimized settings
