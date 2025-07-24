@@ -26,10 +26,12 @@ import sys
 import logging
 import json
 import re
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import tempfile
 import subprocess
+import math
 
 # Lightning Whisper MLX - ultra-fast Apple Silicon optimization
 try:
@@ -255,6 +257,291 @@ class AudioTranscriptionPipeline:
         except Exception as e:
             self.logger.error(f"Failed to normalize audio: {e}")
             raise
+    
+    def _get_audio_duration(self, audio_path: str) -> float:
+        """
+        Get audio duration in seconds using FFprobe.
+        
+        Args:
+            audio_path: Path to audio file
+            
+        Returns:
+            Duration in seconds
+        """
+        try:
+            cmd = ["ffprobe", "-v", "quiet", "-show_entries", "format=duration", "-of", "csv=p=0", audio_path]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                return float(result.stdout.strip())
+        except Exception:
+            pass
+        return 0.0
+    
+    def _detect_silence_in_chunk(self, audio_path: str) -> bool:
+        """
+        Detect if audio chunk is mostly silent using FFmpeg silencedetect filter.
+        
+        Args:
+            audio_path: Path to audio chunk
+            
+        Returns:
+            True if chunk is mostly silent, False otherwise
+        """
+        try:
+            # Use more sensitive silence detection
+            cmd = [
+                "ffmpeg", "-i", audio_path,
+                "-af", "silencedetect=noise=-40dB:duration=1",
+                "-f", "null", "-"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, stderr=subprocess.STDOUT)
+            
+            # Count silence detections
+            silence_count = result.stdout.count("silence_start")
+            
+            # Get chunk duration
+            duration_cmd = ["ffprobe", "-v", "quiet", "-show_entries", "format=duration", "-of", "csv=p=0", audio_path]
+            duration_result = subprocess.run(duration_cmd, capture_output=True, text=True)
+            
+            if duration_result.returncode == 0:
+                chunk_duration = float(duration_result.stdout.strip())
+                # If more than 70% is silence, consider it silent
+                silence_ratio = silence_count * 1.0 / chunk_duration  # 1 second per silence detection
+                return silence_ratio > 0.7
+            
+        except Exception as e:
+            self.logger.debug(f"Silence detection failed: {e}")
+        
+        return False  # Default to processing if detection fails
+    
+    def _is_hallucination(self, text: str) -> bool:
+        """
+        Detect if transcribed text is likely a hallucination (repetitive patterns, common artifacts).
+        
+        Args:
+            text: Transcribed text to check
+            
+        Returns:
+            True if text appears to be hallucination, False otherwise
+        """
+        if not text or len(text.strip()) < 10:
+            return True
+        
+        text = text.strip().lower()
+        
+        # Common hallucination patterns
+        hallucination_patterns = [
+            "повторяю", "повторю", "повтор",
+            "спасибо за внимание", "спасибо за просмотр",
+            "подписывайтесь", "ставьте лайки",
+            "субтитры", "subtitles",
+            "музыка", "music",
+            "аплодисменты", "applause"
+        ]
+        
+        # Check for repetitive patterns
+        words = text.split()
+        if len(words) > 5:
+            # Check if more than 60% of words are the same
+            word_counts = {}
+            for word in words:
+                word_counts[word] = word_counts.get(word, 0) + 1
+            
+            max_count = max(word_counts.values())
+            if max_count / len(words) > 0.6:
+                return True
+        
+        # Check for known hallucination patterns
+        for pattern in hallucination_patterns:
+            if pattern in text:
+                return True
+        
+        # Check for very short repetitive segments
+        if len(text) < 50 and len(set(words)) < 3:
+            return True
+        
+        return False
+    
+    def _create_audio_chunk(self, audio_path: str, start_time: float, duration: float, output_path: str) -> str:
+        """
+        Create an audio chunk from the original file.
+        
+        Args:
+            audio_path: Path to original audio file
+            start_time: Start time in seconds
+            duration: Duration of chunk in seconds
+            output_path: Path for output chunk
+            
+        Returns:
+            Path to created chunk
+        """
+        try:
+            cmd = [
+                "ffmpeg", "-y", "-i", audio_path,
+                "-ss", str(start_time),
+                "-t", str(duration),
+                "-c", "copy",
+                output_path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError(f"FFmpeg chunk creation failed: {result.stderr}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"Failed to create audio chunk: {e}")
+            raise
+    
+    def transcribe_audio_chunked(self, audio_path: str, language: Optional[str] = None, output_path: Optional[str] = None) -> Dict:
+        """
+        Transcribe audio using chunked approach for live streaming effect.
+        
+        Args:
+            audio_path: Path to audio file
+            language: Language code or None for auto-detection
+            output_path: Base path for live output
+            
+        Returns:
+            Combined transcription result
+        """
+        try:
+            if self.model is None:
+                self.load_model()
+            
+            self.logger.info(f"Starting chunked transcription: {audio_path}")
+            
+            # Get audio duration
+            total_duration = self._get_audio_duration(audio_path)
+            if total_duration <= 0:
+                # Fallback to regular transcription
+                return self.transcribe_audio(audio_path, language)
+            
+            # Chunk settings (similar to whisper.cpp stream)
+            chunk_duration = 30.0  # 30 seconds per chunk
+            overlap_duration = 5.0  # 5 seconds overlap
+            step_duration = chunk_duration - overlap_duration  # 25 seconds step
+            
+            print(f"\n🎵 Аудио файл: {Path(audio_path).name}")
+            print(f"⏱️  Длительность: {total_duration:.1f} секунд")
+            print(f"🧠 Модель: {self.model_name}")
+            print(f"🌍 Язык: {language or 'ru (по умолчанию)'}")
+            print(f"📦 Чанки: {chunk_duration:.0f}с с перекрытием {overlap_duration:.0f}с")
+            print("\n🚀 Начинаем потоковую транскрипцию...\n")
+            
+            # Prepare live output file
+            live_output_file = None
+            if output_path:
+                live_output_file = f"{output_path}_live.txt"
+                # Clear the file
+                with open(live_output_file, 'w', encoding='utf-8') as f:
+                    f.write("")
+            
+            all_segments = []
+            all_text_parts = []
+            chunk_count = 0
+            skipped_chunks = 0
+            filtered_segments = 0
+            
+            # Process chunks
+            current_time = 0.0
+            while current_time < total_duration:
+                chunk_count += 1
+                
+                # Calculate chunk boundaries
+                chunk_end = min(current_time + chunk_duration, total_duration)
+                actual_duration = chunk_end - current_time
+                
+                print(f"📦 Обрабатываем чанк {chunk_count}: {current_time:.1f}s - {chunk_end:.1f}s")
+                
+                # Create temporary chunk file
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_chunk:
+                    chunk_path = temp_chunk.name
+                
+                try:
+                    # Extract chunk
+                    self._create_audio_chunk(audio_path, current_time, actual_duration, chunk_path)
+                    
+                    # Check if chunk is mostly silent
+                    if self._detect_silence_in_chunk(chunk_path):
+                        print(f"🔇 Чанк {chunk_count} в основном тишина - пропускаем")
+                        skipped_chunks += 1
+                        # Clean up chunk file before continuing
+                        if os.path.exists(chunk_path):
+                            os.unlink(chunk_path)
+                        current_time += step_duration
+                        continue
+                    
+                    # Transcribe chunk
+                    chunk_result = self.transcribe_audio(chunk_path, language)
+                    
+                    # Process chunk segments
+                    if isinstance(chunk_result, dict) and "segments" in chunk_result:
+                        for segment in chunk_result["segments"]:
+                            # Adjust timestamps to global time
+                            adjusted_segment = {
+                                "start": segment["start"] + current_time,
+                                "end": segment["end"] + current_time,
+                                "text": segment["text"]
+                            }
+                            
+                            # Skip overlapping segments from previous chunks
+                            if not all_segments or adjusted_segment["start"] >= all_segments[-1]["end"] - 1.0:
+                                # Filter out hallucinations
+                                if self._is_hallucination(adjusted_segment["text"]):
+                                    filtered_segments += 1
+                                    timestamp = f"[{adjusted_segment['start']:.1f}s]"
+                                    print(f"🚫 {timestamp} Отфильтровано (галлюцинация): {adjusted_segment['text'][:50]}...")
+                                    continue
+                                
+                                all_segments.append(adjusted_segment)
+                                all_text_parts.append(adjusted_segment["text"])
+                                
+                                # Live output
+                                timestamp = f"[{adjusted_segment['start']:.1f}s]"
+                                print(f"{timestamp} {adjusted_segment['text']}")
+                                
+                                # Write to live file
+                                if live_output_file:
+                                    try:
+                                        with open(live_output_file, 'w', encoding='utf-8') as f:
+                                            f.write('\n'.join(all_text_parts))
+                                    except Exception as e:
+                                        self.logger.warning(f"Failed to write live output: {e}")
+                                
+                                # Small delay for visual effect
+                                time.sleep(0.2)
+                    
+                finally:
+                    # Clean up chunk file
+                    if os.path.exists(chunk_path):
+                        os.unlink(chunk_path)
+                
+                # Move to next chunk
+                current_time += step_duration
+            
+            # Combine results
+            combined_result = {
+                "text": " ".join(all_text_parts),
+                "segments": all_segments,
+                "language": language or "ru"
+            }
+            
+            print("\n" + "-" * 50)
+            print(f"\n📊 Статистика потоковой транскрипции:")
+            print(f"   • Чанков всего: {chunk_count}")
+            print(f"   • Обработано: {chunk_count - skipped_chunks}")
+            print(f"   • Пропущено (тишина): {skipped_chunks}")
+            print(f"   • Сегментов всего: {len(all_segments) + filtered_segments}")
+            print(f"   • Принято: {len(all_segments)}")
+            print(f"   • Отфильтровано (галлюцинации): {filtered_segments}")
+            print(f"   • Общий текст: {len(combined_result['text'])} символов")
+            
+            self.logger.info("Chunked transcription completed")
+            return combined_result
+            
+        except Exception as e:
+            self.logger.error(f"Chunked transcription failed: {e}")
+            # Fallback to regular transcription
+            return self.transcribe_audio(audio_path, language)
     
     def transcribe_audio(self, audio_path: str, language: Optional[str] = None) -> Dict:
         """
@@ -628,8 +915,8 @@ class AudioTranscriptionPipeline:
                 # Convert to WAV format
                 self.convert_audio_format(input_path, temp_wav_path)
                 
-                # Transcribe audio
-                result = self.transcribe_audio(temp_wav_path, language)
+                # Transcribe audio with chunked approach for live streaming
+                result = self.transcribe_audio_chunked(temp_wav_path, language, output_path)
                 
                 # Post-process transcript
                 processed_result = self.post_process_transcript(result)
