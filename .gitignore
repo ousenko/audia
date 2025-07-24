@@ -4,45 +4,13 @@ venv
 # macOS system files
 .DS_Store
 
-# Environment variables (contains API keys)
 .env
-
-# Output files
 outputs/*
-!outputs/.gitkeep
-*.txt
-*.json
-*.srt
-*.wav
-*.mp3
-*.m4a
-# Exclude documentation from ignore
-!README.md
-!QUICKSTART.md
-!ARCHITECTURE.md
-!*.example.md
-# Exclude example prompt files from ignore
-!prompts/example-*.txt
 
-# Python cache
+!prompts/example-*.txt
+prompts/*
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/*
-test_audio*
+test_*
 .DS_Store
 mlx_models
+dist_build/*
