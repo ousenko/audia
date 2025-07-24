@@ -46,8 +46,9 @@ Use Cases:
   %(prog)s audio.m4a -m small                 # Fast transcription (small model, 23x real-time)
   %(prog)s audio.m4a -m medium                # Balanced transcription (medium model, 10x real-time)
   %(prog)s audio.m4a -l en                    # English transcription
+  %(prog)s audio.m4a -o transcript.txt        # Save to specific file
+  %(prog)s audio.m4a -o /path/to/result.txt   # Save to custom path
   %(prog)s audio.m4a -f all                   # Output all formats (txt, json, srt)
-  %(prog)s audio.m4a -f srt                   # Output subtitle format
 
 2. TRANSCRIPTION + AI PROCESSING:
   %(prog)s audio.m4a -p meeting_notes         # Meeting notes generation
@@ -57,7 +58,7 @@ Use Cases:
     )
     
     parser.add_argument("input", nargs='?', help="Input audio file path (M4A, MP3, WAV, etc.)")
-    parser.add_argument("-o", "--output", help="Output path (without extension)")
+    parser.add_argument("-o", "--output", help="Output file path (e.g., /path/to/transcript.txt)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
     parser.add_argument("-m", "--model", default="large-v3", 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
@@ -104,9 +105,14 @@ Use Cases:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Determine output path - save to specified output directory
+    # Determine output path
     if args.output:
         output_path = Path(args.output)
+        # Create parent directory if it doesn't exist
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Remove extension if provided, we'll add it based on format
+        if output_path.suffix:
+            output_path = output_path.with_suffix('')
     else:
         input_path = Path(args.input)
         # Create output directory if it doesn't exist

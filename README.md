@@ -84,11 +84,14 @@ python audia.py audio.m4a -p meeting_notes
 # English language transcription
 ./audia audio.m4a -l en
 
+# Save to specific file
+./audia audio.m4a -o transcript.txt
+
+# Save to custom path
+./audia audio.m4a -o /path/to/my_transcript.txt
+
 # Output all formats (txt, json, srt)
 ./audia audio.m4a -f all
-
-# Output subtitle format
-./audia audio.m4a -f srt
 ```
 
 ### Use Case 2: Transcription + AI Processing
@@ -112,6 +115,7 @@ python audia.py audio.m4a -p meeting_notes
 
 | Parameter | Description | Example |
 |-----------|-------------|----------|
+| `-o, --output` | Output file path | `-o transcript.txt` |
 | `-m, --model` | Whisper model | `-m large-v3` |
 | `-l, --language` | Audio language | `-l en` (default: ru) |
 | `-f, --format` | Output format | `-f all` (default: txt) |
