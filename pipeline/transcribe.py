@@ -115,7 +115,23 @@ class AudioTranscriptionPipeline:
                 try:
                     from huggingface_hub import configure_http_backend
                     import urllib3
+                    import os
                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    
+                    # Set environment variables to bypass proxy and SSL issues
+                    os.environ['PYTHONHTTPSVERIFY'] = '0'
+                    os.environ['CURL_CA_BUNDLE'] = ''
+                    os.environ['REQUESTS_CA_BUNDLE'] = ''
+                    os.environ['SSL_CERT_FILE'] = ''
+                    
+                    # Add huggingface.co to NO_PROXY to bypass proxy issues
+                    current_no_proxy = os.environ.get('NO_PROXY', '')
+                    if 'huggingface.co' not in current_no_proxy:
+                        if current_no_proxy:
+                            os.environ['NO_PROXY'] = f"{current_no_proxy},huggingface.co,*.huggingface.co"
+                        else:
+                            os.environ['NO_PROXY'] = "huggingface.co,*.huggingface.co"
+                        self.logger.info(f"Added huggingface.co to NO_PROXY: {os.environ['NO_PROXY']}")
                     
                     # Create SSL context with relaxed verification rules
                     # This solves 'Basic Constraints not critical' error
@@ -128,20 +144,29 @@ class AudioTranscriptionPipeline:
                     class CustomHttpAdapter(requests.adapters.HTTPAdapter):
                         def init_poolmanager(self, *args, **kwargs):
                             kwargs['ssl_context'] = custom_ssl_context
+                            kwargs['cert_reqs'] = 'CERT_NONE'
                             super().init_poolmanager(*args, **kwargs)
                         
                         def proxy_manager_for(self, *args, **kwargs):
                             kwargs['ssl_context'] = custom_ssl_context
+                            kwargs['cert_reqs'] = 'CERT_NONE'
                             return super().proxy_manager_for(*args, **kwargs)
                     
                     # Create session factory that uses our custom adapter
                     def backend_factory() -> requests.Session:
                         session = requests.Session()
                         session.mount("https://", CustomHttpAdapter())
+                        session.mount("http://", CustomHttpAdapter())
+                        # Disable SSL verification completely
+                        session.verify = False
                         return session
                     
                     # Configure huggingface_hub to use our custom backend
                     configure_http_backend(backend_factory=backend_factory)
+                    
+                    # Also set global SSL context as fallback
+                    ssl._create_default_https_context = ssl._create_unverified_context
+                    
                     self.logger.info("Configured huggingface_hub with custom SSL context for corporate environments")
                     
                 except ImportError:
