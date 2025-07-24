@@ -1,0 +1,11 @@
+# Lightning Whisper MLX Audio Transcription Pipeline Dependencies
+# Lightning Whisper MLX for ultra-fast Apple Silicon transcription
+lightning-whisper-mlx>=0.1.0
+
+# Core dependencies
+torch>=2.0.0
+torchaudio>=2.0.0
+librosa>=0.10.0
+pydub>=0.25.1
+numpy>=1.24.0
+ffmpeg-python>=0.2.0
