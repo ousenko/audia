@@ -406,7 +406,7 @@ class AudioTranscriptionPipeline:
             "подписывайтесь", "ставьте лайки",
             "субтитры", "subtitles",
             "музыка", "music",
-            "аплодисменты", "applause"
+            "аплодисменты", "applause", "редактор", "субтитров", "корректор"
         ]
         
         # Check for repetitive patterns
