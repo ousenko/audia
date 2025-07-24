@@ -28,14 +28,8 @@ if [ ! -f "$AUDIA_SCRIPT" ]; then
     exit 1
 fi
 
-# Activate virtual environment and run audia.py with all arguments
-source "$VENV_PATH/bin/activate" && python "$AUDIA_SCRIPT" "$@"
-
-# Capture the exit code from audia.py
-EXIT_CODE=$?
-
-# Deactivate virtual environment (optional, happens automatically when script ends)
-# deactivate
+# Run audia.py with virtual environment Python (without affecting parent shell)
+"$VENV_PATH/bin/python" "$AUDIA_SCRIPT" "$@"
 
 # Exit with the same code as audia.py
-exit $EXIT_CODE
+exit $?
