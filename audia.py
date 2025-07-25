@@ -42,6 +42,81 @@ except ImportError as e:
     sys.exit(1)
 
 
+def process_existing_transcript(transcript_path: Path, prompt_type: str, output_path: str = None, output_dir: str = "outputs", verify_ssl: bool = True):
+    """
+    Process an existing transcript file with AI prompt.
+    
+    Args:
+        transcript_path: Path to the transcript file
+        prompt_type: AI prompt type to use
+        output_path: Optional custom output path
+        output_dir: Output directory (default: outputs)
+        verify_ssl: SSL verification setting
+    
+    Returns:
+        Path to the processed output file
+    """
+    print(f"🤖 Processing transcript with AI prompt: {prompt_type}")
+    print(f"📄 Input: {transcript_path}")
+    
+    # Read the transcript file
+    try:
+        with open(transcript_path, 'r', encoding='utf-8') as f:
+            transcript_text = f.read().strip()
+        
+        if not transcript_text:
+            raise ValueError("Transcript file is empty")
+            
+        print(f"📝 Transcript length: {len(transcript_text)} characters")
+        
+    except Exception as e:
+        raise Exception(f"Failed to read transcript file: {e}")
+    
+    # Initialize AI processor
+    try:
+        if not AIProcessor:
+            raise Exception("AI processing not available. Install required dependencies.")
+            
+        processor = AIProcessor()
+        
+    except Exception as e:
+        raise Exception(f"Failed to initialize AI processor: {e}")
+    
+    # Determine output path
+    if output_path:
+        final_output_path = Path(output_path)
+        # Remove extension if provided and add .txt
+        if final_output_path.suffix:
+            final_output_path = final_output_path.with_suffix('.txt')
+        else:
+            final_output_path = final_output_path.with_suffix('.txt')
+    else:
+        # Create output filename based on input and prompt
+        base_name = transcript_path.stem
+        final_output_path = Path(output_dir) / f"{base_name}_{prompt_type}.txt"
+    
+    # Create output directory if it doesn't exist
+    final_output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Process the transcript with AI
+    try:
+        print(f"🧠 Processing with AI...")
+        processed_text = processor.process_transcript(transcript_text, prompt_type)
+        
+        if not processed_text:
+            raise Exception("AI processing returned empty result")
+            
+        # Save the processed result
+        with open(final_output_path, 'w', encoding='utf-8') as f:
+            f.write(processed_text)
+            
+        print(f"💾 Saved processed result to: {final_output_path}")
+        return str(final_output_path)
+        
+    except Exception as e:
+        raise Exception(f"AI processing failed: {e}")
+
+
 def main():
     """Main CLI interface."""
     parser = argparse.ArgumentParser(
@@ -63,6 +138,11 @@ Use Cases:
   %(prog)s audio.m4a -p meeting_notes         # Meeting notes generation
   %(prog)s audio.m4a -p podcast_summary       # Podcast summary generation
   %(prog)s audio.m4a -m medium -p meeting_notes  # Faster transcription + AI processing
+
+3. TRANSCRIPT POST-PROCESSING:
+  %(prog)s --process-transcript transcript.txt -p meeting_notes  # Process existing transcript
+  %(prog)s --process-transcript transcript.txt -p psy -o analysis.txt  # Custom output file
+  %(prog)s --process-transcript outputs/audio.txt -p podcast_summary  # Process previous result
 
         """
     )
@@ -87,6 +167,8 @@ Use Cases:
     # AI Processing arguments
     parser.add_argument("-p", "--process", 
                        help="Enable AI processing with specified prompt (e.g., meeting_notes, podcast_summary)")
+    parser.add_argument("--process-transcript", metavar="TRANSCRIPT_FILE",
+                       help="Process an existing transcript file with AI prompt (requires -p/--process)")
     parser.add_argument("--list-prompts", action="store_true",
                        help="List available AI processing prompts")
     
@@ -114,9 +196,37 @@ Use Cases:
             print("❌ AI processing not available. Install required dependencies.")
             return
     
-    # Check if input file is required
+    # Handle transcript processing mode
+    if args.process_transcript:
+        if not args.process:
+            parser.error("--process-transcript requires -p/--process to specify the prompt")
+        
+        # Check if transcript file exists
+        transcript_path = Path(args.process_transcript)
+        if not transcript_path.exists():
+            print(f"❌ Error: Transcript file not found: {transcript_path}")
+            return
+        
+        # Process the transcript
+        try:
+            result = process_existing_transcript(
+                transcript_path=transcript_path,
+                prompt_type=args.process,
+                output_path=args.output,
+                output_dir=args.output_dir,
+                verify_ssl=not no_ssl_verify
+            )
+            if result:
+                print(f"✅ Transcript processing completed successfully!")
+                print(f"📄 Output: {result}")
+            return
+        except Exception as e:
+            print(f"❌ Error processing transcript: {e}")
+            return
+    
+    # Check if input file is required for audio transcription
     if not args.input and not args.list_prompts:
-        parser.error("Input audio file is required unless using --list-prompts")
+        parser.error("Input audio file is required unless using --list-prompts or --process-transcript")
     
     # Set logging level
     if args.verbose:
