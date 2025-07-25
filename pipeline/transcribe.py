@@ -71,7 +71,7 @@ class AudioTranscriptionPipeline:
         Initialize the Lightning Whisper MLX transcription pipeline.
         
         Args:
-            model_name: Whisper model to use (tiny, base, small, medium, large, large-v2, large-v3)
+            model_name: Whisper model to use (tiny, base, small, medium, large, large-v2, large-v3, large-v3-turbo)
             batch_size: Batch size for Lightning processing (default: 12)
             quantization: Quantization level (None, '4bit', '8bit') - None for best compatibility
             enable_ai_processing: Enable AI-powered transcript processing

@@ -71,7 +71,7 @@ Use Cases:
     parser.add_argument("-o", "--output", help="Output file path (e.g., /path/to/transcript.txt)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
     parser.add_argument("-m", "--model", default="large-v3", 
-                       choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
+                       choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3", "large-v3-turbo"],
                        help="Whisper model to use (default: large-v3). All models support Russian language.")
     parser.add_argument("-l", "--language", default="ru", help="Language code (default: ru). Supports en, ru, es, etc.")
     parser.add_argument("-f", "--format", default="txt",

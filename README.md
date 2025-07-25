@@ -17,6 +17,7 @@ An ultra-fast audio transcription pipeline using Lightning Whisper MLX for maxim
 |--------|-------|-------|----------|
 | Lightning MLX | small | **23x real-time** | Quick drafts, maximum speed |
 | Lightning MLX | medium | **10x real-time** | Balanced speed/quality |
+| Lightning MLX | large-v3-turbo | **~15x real-time** | Fast + high quality |
 | Lightning MLX | large-v3 | **6x real-time** | **Default** - best quality |
 
 ## 🛠️ Installation
@@ -81,6 +82,9 @@ python audia.py audio.m4a -p meeting_notes
 # Balanced quality/speed (medium model - 10x real-time)
 ./audia audio.m4a -m medium
 
+# Fast + high quality (large-v3-turbo model - ~15x real-time)
+./audia audio.m4a -m large-v3-turbo
+
 # English language transcription
 ./audia audio.m4a -l en
 
@@ -116,7 +120,7 @@ python audia.py audio.m4a -p meeting_notes
 | Parameter | Description | Example |
 |-----------|-------------|----------|
 | `-o, --output` | Output file path | `-o transcript.txt` |
-| `-m, --model` | Whisper model | `-m large-v3` |
+| `-m, --model` | Whisper model | `-m large-v3-turbo` |
 | `-l, --language` | Audio language | `-l en` (default: ru) |
 | `-f, --format` | Output format | `-f all` (default: txt) |
 | `-p, --process` | AI processing prompt | `-p meeting_notes` |
