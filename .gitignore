@@ -14,3 +14,4 @@ test_*
 .DS_Store
 mlx_models
 dist_build/*
+.windsurfrules
