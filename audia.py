@@ -126,18 +126,17 @@ def main():
 Use Cases:
 
 1. TRANSCRIPTION ONLY:
-  %(prog)s audio.m4a                          # Basic Russian transcription (large-v3 model)
-  %(prog)s audio.m4a -m small                 # Fast transcription (small model, 23x real-time)
-  %(prog)s audio.m4a -m medium                # Balanced transcription (medium model, 10x real-time)
-  %(prog)s audio.m4a -l en                    # English transcription
-  %(prog)s audio.m4a -o transcript.txt        # Save to specific file
+  %(prog)s audio.m4a -o transcript.txt        # Basic Russian transcription (large-v3-turbo model)
+  %(prog)s audio.m4a -o transcript.txt -m small  # Fast transcription (small model, 23x real-time)
+  %(prog)s audio.m4a -o transcript.txt -m medium # Balanced transcription (medium model, 10x real-time)
+  %(prog)s audio.m4a -o transcript.txt -l en  # English transcription
   %(prog)s audio.m4a -o /path/to/result.txt   # Save to custom path
-  %(prog)s audio.m4a -f all                   # Output all formats (txt, json, srt)
+  %(prog)s audio.m4a -o transcript.txt -f all # Output all formats (txt, json, srt)
 
 2. TRANSCRIPTION + AI PROCESSING:
-  %(prog)s audio.m4a -p meeting_notes         # Meeting notes generation
-  %(prog)s audio.m4a -p podcast_summary       # Podcast summary generation
-  %(prog)s audio.m4a -m medium -p meeting_notes  # Faster transcription + AI processing
+  %(prog)s audio.m4a -o transcript.txt -p meeting_notes    # Meeting notes generation
+  %(prog)s audio.m4a -o transcript.txt -p podcast_summary # Podcast summary generation
+  %(prog)s audio.m4a -o transcript.txt -m medium -p meeting_notes # Faster transcription + AI processing
 
 3. TRANSCRIPT POST-PROCESSING:
   %(prog)s --process-transcript transcript.txt -p meeting_notes  # Process existing transcript
@@ -148,11 +147,11 @@ Use Cases:
     )
     
     parser.add_argument("input", nargs='?', help="Input audio file path (M4A, MP3, WAV, etc.)")
-    parser.add_argument("-o", "--output", help="Output file path (e.g., /path/to/transcript.txt)")
+    parser.add_argument("-o", "--output", required=True, help="Output file path (e.g., /path/to/transcript.txt)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
-    parser.add_argument("-m", "--model", default="large-v3", 
+    parser.add_argument("-m", "--model", default="large-v3-turbo", 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3", "large-v3-turbo"],
-                       help="Whisper model to use (default: large-v3). All models support Russian language.")
+                       help="Whisper model to use (default: large-v3-turbo). All models support Russian language.")
     parser.add_argument("-l", "--language", default="ru", help="Language code (default: ru). Supports en, ru, es, etc.")
     parser.add_argument("-f", "--format", default="txt",
                        choices=["txt", "json", "srt", "formatted", "all"],

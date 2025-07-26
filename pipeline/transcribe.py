@@ -605,6 +605,14 @@ class AudioTranscriptionPipeline:
             print(f"   • Filtered (hallucinations): {filtered_segments}")
             print(f"   • Total text: {len(combined_result['text'])} characters")
             
+            # Clean up live output file
+            if live_output_file and os.path.exists(live_output_file):
+                try:
+                    os.unlink(live_output_file)
+                    self.logger.debug(f"Cleaned up live output file: {live_output_file}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to clean up live output file: {e}")
+            
             self.logger.info("Chunked transcription completed")
             return combined_result
             

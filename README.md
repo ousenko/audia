@@ -17,8 +17,8 @@ An ultra-fast audio transcription pipeline using Lightning Whisper MLX for maxim
 |--------|-------|-------|----------|
 | Lightning MLX | small | **23x real-time** | Quick drafts, maximum speed |
 | Lightning MLX | medium | **10x real-time** | Balanced speed/quality |
-| Lightning MLX | large-v3-turbo | **~15x real-time** | Fast + high quality |
-| Lightning MLX | large-v3 | **6x real-time** | **Default** - best quality |
+| Lightning MLX | large-v3-turbo | **~15x real-time** | **Default** - fast + high quality |
+| Lightning MLX | large-v3 | **6x real-time** | Best quality |
 
 ## 🛠️ Installation
 
@@ -45,12 +45,12 @@ Use the `audia` wrapper script that automatically handles virtual environment:
 
 ```bash
 # Use Case 1: Transcription Only
-./audia audio.m4a                    # Basic Russian transcription
-./audia audio.m4a -m small           # Fast transcription (23x real-time)
-./audia audio.m4a -l en              # English transcription
+./audia audio.m4a -o transcript.txt                    # Basic Russian transcription (large-v3-turbo)
+./audia audio.m4a -o transcript.txt -m small           # Fast transcription (23x real-time)
+./audia audio.m4a -o transcript.txt -l en              # English transcription
 
 # Use Case 2: Transcription + AI Processing
-./audia audio.m4a -p meeting_notes   # Meeting notes generation
+./audia audio.m4a -o transcript.txt -p meeting_notes   # Meeting notes generation
 ./audia --list-prompts               # List available AI prompts
 ```
 
@@ -73,42 +73,39 @@ python audia.py audio.m4a -p meeting_notes
 ### Use Case 1: Transcription Only
 
 ```bash
-# Basic Russian transcription (large-v3 model, 6x real-time)
-./audia audio.m4a
+# Basic Russian transcription (large-v3-turbo model, ~15x real-time)
+./audia audio.m4a -o transcript.txt
 
 # Fast transcription (small model - 23x real-time)
-./audia audio.m4a -m small
+./audia audio.m4a -o transcript.txt -m small
 
 # Balanced quality/speed (medium model - 10x real-time)
-./audia audio.m4a -m medium
+./audia audio.m4a -o transcript.txt -m medium
 
-# Fast + high quality (large-v3-turbo model - ~15x real-time)
-./audia audio.m4a -m large-v3-turbo
+# Best quality (large-v3 model - 6x real-time)
+./audia audio.m4a -o transcript.txt -m large-v3
 
 # English language transcription
-./audia audio.m4a -l en
-
-# Save to specific file
-./audia audio.m4a -o transcript.txt
+./audia audio.m4a -o transcript.txt -l en
 
 # Save to custom path
 ./audia audio.m4a -o /path/to/my_transcript.txt
 
 # Output all formats (txt, json, srt)
-./audia audio.m4a -f all
+./audia audio.m4a -o transcript.txt -f all
 ```
 
 ### Use Case 2: Transcription + AI Processing
 
 ```bash
 # Meeting notes generation
-./audia audio.m4a -p meeting_notes
+./audia audio.m4a -o transcript.txt -p meeting_notes
 
 # Podcast summary generation
-./audia audio.m4a -p podcast_summary
+./audia audio.m4a -o transcript.txt -p podcast_summary
 
 # Faster transcription + AI processing
-./audia audio.m4a -m medium -p meeting_notes
+./audia audio.m4a -o transcript.txt -m medium -p meeting_notes
 
 # List available AI prompts
 ./audia --list-prompts
@@ -160,7 +157,7 @@ By default, only a plain text transcript is created. Use `-f all` for multiple f
 
 ```bash
 # Use different output directory
-./audia audio.m4a --output-dir my_results
+./audia audio.m4a -o transcript.txt --output-dir my_results
 
 # Specify exact output path
 ./audia audio.m4a -o /path/to/specific/output
@@ -249,7 +246,7 @@ prompts/
 ./audia --list-prompts
 
 # Use your custom prompt
-./audia audio.m4a -p your_custom_prompt
+./audia audio.m4a -o transcript.txt -p your_custom_prompt
 ```
 
 ## 🚨 Requirements
