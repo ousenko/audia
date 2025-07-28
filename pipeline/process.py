@@ -47,8 +47,8 @@ class AIProcessingConfig:
 class AIProcessor:
     """Handles AI-powered transcript processing using OpenAI-compatible APIs."""
     
-    def __init__(self, config_path: str = "config.yaml", require_api_key: bool = True):
-        """Initialize AI processor with configuration."""
+    def __init__(self, require_api_key: bool = True):
+        """Initialize AI processor with configuration from .env file."""
         self.logger = logging.getLogger(__name__)
         
         # Load .env file if available
@@ -59,7 +59,7 @@ class AIProcessor:
                 self.logger.info("Loaded environment variables from .env file")
         
         try:
-            self.config = self._load_config(config_path, require_api_key)
+            self.config = self._load_config_from_env(require_api_key)
             self.prompts_dir = Path("prompts")
             self.logger.info(f"AI processor initialized with model: {self.config.model}")
         except Exception as e:
@@ -72,39 +72,28 @@ class AIProcessor:
                 self.prompts_dir = Path("prompts")
                 self.logger.info("AI processor initialized without API key (prompt listing only)")
     
-    def _load_config(self, config_path: str, require_api_key: bool = True) -> AIProcessingConfig:
-        """Load configuration from YAML file."""
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config_data = yaml.safe_load(f)
-            
-            ai_config = config_data.get('ai_processing', {})
-            
-            # Get API settings from environment variables (loaded from .env)
-            api_url = os.getenv('OPENAI_API_URL', 'https://api.openai.com/v1/chat/completions')
-            api_key = os.getenv('OPENAI_API_KEY', '')
-            model = os.getenv('OPENAI_MODEL', ai_config.get('model', 'gpt-4o-mini'))
-            
-            # Get optional settings from environment or config
-            temperature = float(os.getenv('OPENAI_TEMPERATURE', ai_config.get('temperature', 0.3)))
-            max_tokens = int(os.getenv('OPENAI_MAX_TOKENS', ai_config.get('max_tokens', 4000)))
-            timeout = int(os.getenv('OPENAI_TIMEOUT', ai_config.get('timeout', 60)))
-            
-            if require_api_key and not api_key:
-                raise ValueError("API key not found. Set OPENAI_API_KEY in .env file or environment variable")
-            
-            return AIProcessingConfig(
-                api_url=api_url,
-                api_key=api_key,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                timeout=timeout
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Failed to load config: {e}")
-            raise
+    def _load_config_from_env(self, require_api_key: bool = True) -> AIProcessingConfig:
+        """Load configuration from environment variables (.env file)."""
+        # Get API settings from environment variables
+        api_url = os.getenv('OPENAI_API_URL', 'https://api.openai.com/v1/chat/completions')
+        api_key = os.getenv('OPENAI_API_KEY', '')
+        model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+        
+        # Get processing settings from environment variables (use API defaults if not specified)
+        temperature = float(os.getenv('OPENAI_TEMPERATURE', '0.7'))  # API default
+        timeout = int(os.getenv('OPENAI_TIMEOUT', '60'))  # Reasonable default
+        
+        if require_api_key and not api_key:
+            raise ValueError("API key not found. Set OPENAI_API_KEY in .env file or environment variable")
+        
+        return AIProcessingConfig(
+            api_url=api_url,
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=0,  # Not used - API determines response length
+            timeout=timeout
+        )
     
     def load_prompt(self, prompt_type: str) -> str:
         """
@@ -132,17 +121,19 @@ class AIProcessor:
             self.logger.error(f"Failed to load prompt from {prompt_file}: {e}")
             raise
     
-    def _chunk_transcript(self, transcript: str, chunk_size: int = 8000) -> List[str]:
+    def _chunk_transcript(self, transcript: str, chunk_size: Optional[int] = None) -> List[str]:
         """
-        Split long transcript into chunks for processing.
+        Split transcript into chunks for processing.
         
         Args:
-            transcript: Full transcript text
-            chunk_size: Maximum characters per chunk
+            transcript: Text to split
+            chunk_size: Maximum characters per chunk (defaults to CHUNK_SIZE from .env)
             
         Returns:
-            List of transcript chunks
+            List of text chunks
         """
+        if chunk_size is None:
+            chunk_size = int(os.getenv('CHUNK_SIZE', '400000'))  # Default 400k characters
         if len(transcript) <= chunk_size:
             return [transcript]
         
@@ -184,19 +175,26 @@ class AIProcessor:
         
         payload = {
             "model": self.config.model,
-            "messages": messages,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens
+            "messages": messages
         }
         
         try:
             self.logger.info(f"Making API request to {self.config.api_url}")
+            self.logger.info(f"Model: {self.config.model}")
+            self.logger.info(f"Message content length: {len(messages[0]['content']) if messages else 0} characters")
+            
             response = requests.post(
                 self.config.api_url,
                 headers=headers,
                 json=payload,
                 timeout=self.config.timeout
             )
+            
+            # Log response details for debugging
+            self.logger.info(f"Response status: {response.status_code}")
+            if response.status_code != 200:
+                self.logger.error(f"Response content: {response.text}")
+            
             response.raise_for_status()
             
             result = response.json()

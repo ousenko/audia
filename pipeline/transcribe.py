@@ -347,6 +347,73 @@ class AudioTranscriptionPipeline:
             pass
         return 0.0
     
+    def _is_video_file(self, file_path: str) -> bool:
+        """
+        Check if file is a video file based on extension.
+        
+        Args:
+            file_path: Path to file
+            
+        Returns:
+            True if file is a video file, False otherwise
+        """
+        video_extensions = {
+            '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', 
+            '.m4v', '.3gp', '.ogv', '.ts', '.mts', '.m2ts'
+        }
+        return Path(file_path).suffix.lower() in video_extensions
+    
+    def _extract_audio_from_video(self, video_path: str) -> str:
+        """
+        Extract audio track from video file using FFmpeg.
+        
+        Args:
+            video_path: Path to video file
+            
+        Returns:
+            Path to extracted audio file (temporary)
+        """
+        try:
+            # Create temporary file for extracted audio
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+                audio_path = temp_file.name
+            
+            self.logger.info(f"🎬 Extracting audio from video: {Path(video_path).name}")
+            
+            # FFmpeg command to extract audio
+            cmd = [
+                "ffmpeg", "-y",  # Overwrite output file
+                "-i", video_path,  # Input video file
+                "-vn",  # No video (audio only)
+                "-acodec", "pcm_s16le",  # Audio codec: 16-bit PCM
+                "-ar", "16000",  # Sample rate: 16kHz
+                "-ac", "1",  # Channels: mono
+                audio_path
+            ]
+            
+            # Run FFmpeg command
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            
+            # Verify extracted audio file exists and has content
+            if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+                raise RuntimeError("Extracted audio file is empty or doesn't exist")
+            
+            self.logger.info(f"✅ Audio extracted successfully: {os.path.getsize(audio_path)} bytes")
+            return audio_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to extract audio from video: {e}")
+            # Clean up temporary file if it exists
+            if 'audio_path' in locals() and os.path.exists(audio_path):
+                try:
+                    os.unlink(audio_path)
+                except:
+                    pass
+            raise
+    
     def _detect_silence_in_chunk(self, audio_path: str) -> bool:
         """
         Detect if audio chunk is mostly silent using FFmpeg silencedetect filter.
@@ -966,10 +1033,10 @@ class AudioTranscriptionPipeline:
     def process_file(self, input_path: str, output_path: str, language: Optional[str] = None, 
                     format_type: str = "all", ai_prompt_type: Optional[str] = None) -> Dict:
         """
-        Process a single audio file through the complete pipeline.
+        Process a single audio or video file through the complete pipeline.
         
         Args:
-            input_path: Path to input audio file
+            input_path: Path to input audio or video file
             output_path: Base path for output files
             language: Language code or None for auto-detection
             format_type: Output format type
@@ -985,13 +1052,23 @@ class AudioTranscriptionPipeline:
             if not os.path.exists(input_path):
                 raise FileNotFoundError(f"Input file not found: {input_path}")
             
+            # Check if input is a video file
+            extracted_audio_path = None
+            processing_path = input_path
+            
+            if self._is_video_file(input_path):
+                # Extract audio from video
+                extracted_audio_path = self._extract_audio_from_video(input_path)
+                processing_path = extracted_audio_path
+                self.logger.info(f"🎵 Using extracted audio for transcription")
+            
             # Create temporary WAV file if needed
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
                 temp_wav_path = temp_file.name
             
             try:
                 # Convert to WAV format
-                self.convert_audio_format(input_path, temp_wav_path)
+                self.convert_audio_format(processing_path, temp_wav_path)
                 
                 # Transcribe audio with chunked approach for live streaming
                 result = self.transcribe_audio_chunked(temp_wav_path, language, output_path)
@@ -1006,9 +1083,17 @@ class AudioTranscriptionPipeline:
                 return processed_result
                 
             finally:
-                # Clean up temporary file
+                # Clean up temporary files
                 if os.path.exists(temp_wav_path):
                     os.unlink(temp_wav_path)
+                
+                # Clean up extracted audio file if it was created
+                if extracted_audio_path and os.path.exists(extracted_audio_path):
+                    try:
+                        os.unlink(extracted_audio_path)
+                        self.logger.debug(f"Cleaned up extracted audio: {extracted_audio_path}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to clean up extracted audio: {e}")
                 
         except Exception as e:
             self.logger.error(f"Failed to process file: {e}")

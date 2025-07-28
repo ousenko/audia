@@ -1,6 +1,6 @@
 # ⚡ audia
 
-An ultra-fast audio transcription pipeline using Lightning Whisper MLX for maximum Apple Silicon performance. Achieves 6-23x real-time transcription speed while maintaining excellent quality.
+An ultra-fast audio and video transcription pipeline using Lightning Whisper MLX for maximum Apple Silicon performance. Achieves 6-23x real-time transcription speed while maintaining excellent quality. Supports automatic audio extraction from video files.
 
 ## 🚀 Performance Highlights
 
@@ -46,11 +46,13 @@ Use the `audia` wrapper script that automatically handles virtual environment:
 ```bash
 # Use Case 1: Transcription Only
 ./audia audio.m4a -o transcript.txt                    # Basic Russian transcription (large-v3-turbo)
+./audia video.mp4 -o transcript.txt                    # Video transcription (auto audio extraction)
 ./audia audio.m4a -o transcript.txt -m small           # Fast transcription (23x real-time)
 ./audia audio.m4a -o transcript.txt -l en              # English transcription
 
 # Use Case 2: Transcription + AI Processing
 ./audia audio.m4a -o transcript.txt -p meeting_notes   # Meeting notes generation
+./audia video.mp4 -o transcript.txt -p meeting_notes   # Video meeting transcription + AI processing
 ./audia --list-prompts               # List available AI prompts
 ```
 
@@ -76,8 +78,14 @@ python audia.py audio.m4a -p meeting_notes
 # Basic Russian transcription (large-v3-turbo model, ~15x real-time)
 ./audia audio.m4a -o transcript.txt
 
+# Video transcription (automatic audio extraction)
+./audia video.mp4 -o transcript.txt
+./audia meeting.mov -o transcript.txt
+./audia presentation.avi -o transcript.txt
+
 # Fast transcription (small model - 23x real-time)
 ./audia audio.m4a -o transcript.txt -m small
+./audia video.mp4 -o transcript.txt -m small
 
 # Balanced quality/speed (medium model - 10x real-time)
 ./audia audio.m4a -o transcript.txt -m medium
@@ -87,6 +95,7 @@ python audia.py audio.m4a -p meeting_notes
 
 # English language transcription
 ./audia audio.m4a -o transcript.txt -l en
+./audia video.mp4 -o transcript.txt -l en
 
 # Save to custom path
 ./audia audio.m4a -o /path/to/my_transcript.txt
@@ -100,12 +109,15 @@ python audia.py audio.m4a -p meeting_notes
 ```bash
 # Meeting notes generation
 ./audia audio.m4a -o transcript.txt -p meeting_notes
+./audia meeting.mp4 -o transcript.txt -p meeting_notes
 
 # Podcast summary generation
 ./audia audio.m4a -o transcript.txt -p podcast_summary
+./audia podcast.mov -o transcript.txt -p podcast_summary
 
 # Faster transcription + AI processing
 ./audia audio.m4a -o transcript.txt -m medium -p meeting_notes
+./audia video.mp4 -o transcript.txt -m medium -p meeting_notes
 
 # List available AI prompts
 ./audia --list-prompts
@@ -166,6 +178,7 @@ By default, only a plain text transcript is created. Use `-f all` for multiple f
 ## 🎯 Features
 
 - **Ultra-fast transcription** using Lightning Whisper MLX optimized for Apple Silicon
+- **Video file support** with automatic audio extraction from MP4, MOV, AVI, MKV, WebM, and more
 - **AI-powered transcript processing** with customizable prompts for meeting notes, podcast summaries, and more
 - **Multiple output formats**: Plain text, JSON, SRT subtitles, formatted transcripts, AI-processed summaries
 - **High accuracy** with support for 99+ languages including excellent Russian support

@@ -82,18 +82,22 @@ def process_existing_transcript(transcript_path: Path, prompt_type: str, output_
     except Exception as e:
         raise Exception(f"Failed to initialize AI processor: {e}")
     
+    # Get default format from environment
+    default_format = env_vars.get('DEFAULT_FORMAT', 'md')
+    file_extension = f'.{default_format}'
+    
     # Determine output path
     if output_path:
         final_output_path = Path(output_path)
-        # Remove extension if provided and add .txt
+        # Remove extension if provided and add correct extension based on format
         if final_output_path.suffix:
-            final_output_path = final_output_path.with_suffix('.txt')
+            final_output_path = final_output_path.with_suffix(file_extension)
         else:
-            final_output_path = final_output_path.with_suffix('.txt')
+            final_output_path = final_output_path.with_suffix(file_extension)
     else:
         # Create output filename based on input and prompt
         base_name = transcript_path.stem
-        final_output_path = Path(output_dir) / f"{base_name}_{prompt_type}.txt"
+        final_output_path = Path(output_dir) / f"{base_name}_{prompt_type}{file_extension}"
     
     # Create output directory if it doesn't exist
     final_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,6 +131,7 @@ Use Cases:
 
 1. TRANSCRIPTION ONLY:
   %(prog)s audio.m4a -o transcript.txt        # Basic Russian transcription (large-v3-turbo model)
+  %(prog)s video.mp4 -o transcript.txt        # Video transcription (auto audio extraction)
   %(prog)s audio.m4a -o transcript.txt -m small  # Fast transcription (small model, 23x real-time)
   %(prog)s audio.m4a -o transcript.txt -m medium # Balanced transcription (medium model, 10x real-time)
   %(prog)s audio.m4a -o transcript.txt -l en  # English transcription
@@ -146,18 +151,19 @@ Use Cases:
         """
     )
     
-    parser.add_argument("input", nargs='?', help="Input audio file path (M4A, MP3, WAV, etc.)")
+    parser.add_argument("input", nargs='?', help="Input audio or video file path (M4A, MP3, WAV, MP4, MOV, AVI, etc.)")
     parser.add_argument("-o", "--output", required=True, help="Output file path (e.g., /path/to/transcript.txt)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
-    parser.add_argument("-m", "--model", default="large-v3-turbo", 
+    parser.add_argument("-m", "--model", default=env_vars.get('DEFAULT_MODEL', 'large-v3-turbo'), 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3", "large-v3-turbo"],
-                       help="Whisper model to use (default: large-v3-turbo). All models support Russian language.")
-    parser.add_argument("-l", "--language", default="ru", help="Language code (default: ru). Supports en, ru, es, etc.")
-    parser.add_argument("-f", "--format", default="txt",
-                       choices=["txt", "json", "srt", "formatted", "all"],
-                       help="Output format (default: txt)")
-    parser.add_argument("--batch-size", type=int, default=12,
-                       help="Batch size for Lightning Whisper MLX processing (default: 12)")
+                       help=f"Whisper model to use (default: {env_vars.get('DEFAULT_MODEL', 'large-v3-turbo')}). All models support Russian language.")
+    parser.add_argument("-l", "--language", default=env_vars.get('DEFAULT_LANGUAGE', 'ru'), 
+                       help=f"Language code (default: {env_vars.get('DEFAULT_LANGUAGE', 'ru')}). Supports en, ru, es, etc.")
+    parser.add_argument("-f", "--format", default=env_vars.get('DEFAULT_FORMAT', 'md'),
+                       choices=["txt", "json", "srt", "formatted", "all", "md"],
+                       help=f"Output format (default: {env_vars.get('DEFAULT_FORMAT', 'md')})")
+    parser.add_argument("--batch-size", type=int, default=int(env_vars.get('BATCH_SIZE', '12')),
+                       help=f"Batch size for Lightning Whisper MLX processing (default: {env_vars.get('BATCH_SIZE', '12')})")
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="Enable verbose logging")
     parser.add_argument("--no-ssl-verify", action="store_true",
