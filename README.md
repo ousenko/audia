@@ -5,18 +5,23 @@ An ultra-fast audio and video transcription pipeline using Lightning Whisper MLX
 ## 🚀 Performance Highlights
 
 - **Lightning small**: 23.3x real-time speed (6.3s for 147s audio) - Maximum speed
-- **Lightning medium**: 10.7x real-time speed (13.7s for 147s audio) - **RECOMMENDED**
-- **Lightning large-v3**: 5.9x real-time speed (24.8s for 147s audio) - **PREMIUM**
+- **Lightning large-v3-turbo**: ~15x real-time speed - **DEFAULT** - fast + high quality
+- **Lightning medium**: 10.7x real-time speed (13.7s for 147s audio) - balanced
+- **Lightning large-v3**: 5.9x real-time speed (24.8s for 147s audio) - best quality
 - **Russian language**: Excellent transcription quality with proper formatting
 - **Apple Silicon**: Optimized exclusively for M1/M2/M3 chips
-- **Multiple Output Formats**: TXT (default), JSON, SRT, formatted transcripts
+- **Multiple Output Formats**: Markdown (default), JSON, SRT, formatted transcripts
 
 ## 📊 Speed Comparison
 
 | Method | Model | Speed | Use Case |
 |--------|-------|-------|----------|
-| Lightning MLX | small | **23x real-time** | Quick drafts, maximum speed |
+| Lightning MLX | tiny | **~30x real-time** | Ultra-fast, basic quality |
+| Lightning MLX | base | **~25x real-time** | Fast, improved quality |
+| Lightning MLX | small | **23x real-time** | Quick drafts, good quality |
 | Lightning MLX | medium | **10x real-time** | Balanced speed/quality |
+| Lightning MLX | large | **~8x real-time** | High quality |
+| Lightning MLX | large-v2 | **~7x real-time** | Enhanced quality |
 | Lightning MLX | large-v3-turbo | **~15x real-time** | **Default** - fast + high quality |
 | Lightning MLX | large-v3 | **6x real-time** | Best quality |
 
@@ -27,47 +32,19 @@ An ultra-fast audio and video transcription pipeline using Lightning Whisper MLX
 - **Python 3.8+**
 - **FFmpeg** for audio processing
 
-### Install Dependencies
+### Recommended Installation (with virtual environment)
 
 ```bash
 # Install FFmpeg (required for audio processing)
 brew install ffmpeg
 
+# Create and activate virtual environment (RECOMMENDED)
+python -m venv venv
+source venv/bin/activate
+
 # Install Lightning Whisper MLX and dependencies
 pip install lightning-whisper-mlx
 pip install -r requirements.txt
-```
-
-## 🚀 Quick Start
-
-### Option 1: Convenience Wrapper (Recommended)
-Use the `audia` wrapper script that automatically handles virtual environment:
-
-```bash
-# Use Case 1: Transcription Only
-./audia audio.m4a -o transcript.txt                    # Basic Russian transcription (large-v3-turbo)
-./audia video.mp4 -o transcript.txt                    # Video transcription (auto audio extraction)
-./audia audio.m4a -o transcript.txt -m small           # Fast transcription (23x real-time)
-./audia audio.m4a -o transcript.txt -l en              # English transcription
-
-# Use Case 2: Transcription + AI Processing
-./audia audio.m4a -o transcript.txt -p meeting_notes   # Meeting notes generation
-./audia video.mp4 -o transcript.txt -p meeting_notes   # Video meeting transcription + AI processing
-./audia --list-prompts               # List available AI prompts
-```
-
-### Option 2: Direct Python Call
-If you prefer to manage virtual environment manually:
-
-```bash
-# Activate virtual environment first
-source venv/bin/activate
-
-# Use Case 1: Transcription Only
-python audia.py audio.m4a
-
-# Use Case 2: Transcription + AI Processing
-python audia.py audio.m4a -p meeting_notes
 ```
 
 ## 💻 Usage
@@ -76,66 +53,85 @@ python audia.py audio.m4a -p meeting_notes
 
 ```bash
 # Basic Russian transcription (large-v3-turbo model, ~15x real-time)
-./audia audio.m4a -o transcript.txt
+./audia audio.m4a -o transcript.md
 
 # Video transcription (automatic audio extraction)
-./audia video.mp4 -o transcript.txt
-./audia meeting.mov -o transcript.txt
-./audia presentation.avi -o transcript.txt
+./audia video.mp4 -o transcript.md
+./audia meeting.mov -o transcript.md
+./audia presentation.avi -o transcript.md
 
 # Fast transcription (small model - 23x real-time)
-./audia audio.m4a -o transcript.txt -m small
-./audia video.mp4 -o transcript.txt -m small
+./audia audio.m4a -o transcript.md -m small
+./audia video.mp4 -o transcript.md -m small
 
 # Balanced quality/speed (medium model - 10x real-time)
-./audia audio.m4a -o transcript.txt -m medium
+./audia audio.m4a -o transcript.md -m medium
 
 # Best quality (large-v3 model - 6x real-time)
-./audia audio.m4a -o transcript.txt -m large-v3
+./audia audio.m4a -o transcript.md -m large-v3
 
 # English language transcription
-./audia audio.m4a -o transcript.txt -l en
-./audia video.mp4 -o transcript.txt -l en
+./audia audio.m4a -o transcript.md -l en
+./audia video.mp4 -o transcript.md -l en
 
 # Save to custom path
-./audia audio.m4a -o /path/to/my_transcript.txt
+./audia audio.m4a -o /path/to/my_transcript.md
 
-# Output all formats (txt, json, srt)
-./audia audio.m4a -o transcript.txt -f all
+# Output all formats (md, json, srt)
+./audia audio.m4a -o transcript.md -f all
 ```
 
 ### Use Case 2: Transcription + AI Processing
 
 ```bash
 # Meeting notes generation
-./audia audio.m4a -o transcript.txt -p meeting_notes
-./audia meeting.mp4 -o transcript.txt -p meeting_notes
+./audia audio.m4a -o transcript.md -p meeting_notes
+./audia meeting.mp4 -o transcript.md -p meeting_notes
 
 # Podcast summary generation
-./audia audio.m4a -o transcript.txt -p podcast_summary
-./audia podcast.mov -o transcript.txt -p podcast_summary
+./audia audio.m4a -o transcript.md -p podcast_summary
+./audia podcast.mov -o transcript.md -p podcast_summary
 
 # Faster transcription + AI processing
-./audia audio.m4a -o transcript.txt -m medium -p meeting_notes
-./audia video.mp4 -o transcript.txt -m medium -p meeting_notes
+./audia audio.m4a -o transcript.md -m medium -p meeting_notes
+./audia video.mp4 -o transcript.md -m medium -p meeting_notes
 
 # List available AI prompts
 ./audia --list-prompts
 ```
 
+### Use Case 3: Transcript Post-Processing
+
+```bash
+# Process existing transcript with AI prompt
+./audia --process-transcript transcript.md -p meeting_notes
+
+# Process with custom output file
+./audia --process-transcript transcript.md -p psy -o analysis.md
+
+# Process previous transcription result
+./audia --process-transcript outputs/audio.md -p podcast_summary
+
+# Process transcript from different directory
+./audia --process-transcript /path/to/transcript.md -p meeting_notes
+```
 
 ## ⚙️ Command Line Options
 
-| Parameter | Description | Example |
-|-----------|-------------|----------|
-| `-o, --output` | Output file path | `-o transcript.txt` |
-| `-m, --model` | Whisper model | `-m large-v3-turbo` |
-| `-l, --language` | Audio language | `-l en` (default: ru) |
-| `-f, --format` | Output format | `-f all` (default: txt) |
-| `-p, --process` | AI processing prompt | `-p meeting_notes` |
-| `--list-prompts` | Show available prompts | `--list-prompts` |
-| `--output-dir` | Output directory | `--output-dir results` |
-| `--batch-size` | Processing batch size | `--batch-size 16` |
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|----------|
+| `input` | Input audio/video file | - | `audio.m4a` |
+| `-o, --output` | Output file path (required) | - | `-o transcript.md` |
+| `-m, --model` | Whisper model | `large-v3-turbo` | `-m small` |
+| `-l, --language` | Audio language | `ru` | `-l en` |
+| `-f, --format` | Output format | `md` | `-f all` |
+| `-p, --process` | AI processing prompt | - | `-p meeting_notes` |
+| `--process-transcript` | Process existing transcript | - | `--process-transcript file.md` |
+| `--list-prompts` | Show available prompts | - | `--list-prompts` |
+| `--output-dir` | Output directory | `outputs` | `--output-dir results` |
+| `--batch-size` | Processing batch size | `12` | `--batch-size 16` |
+| `-v, --verbose` | Enable verbose logging | `false` | `-v` |
+| `--no-ssl-verify` | Disable SSL verification | `false` | `--no-ssl-verify` |
 
 ## 🔧 Environment Setup
 
@@ -159,17 +155,17 @@ By default, only a plain text transcript is created. Use `-f all` for multiple f
 
 ### File Format Details
 
-- **Plain Text** (`outputs/audio.txt`): Clean, formatted transcript without timestamps
+- **Markdown** (`outputs/audio.md`): Clean, structured transcript in Markdown format (default)
 - **JSON** (`outputs/audio.json`): Complete transcription data with timestamps and metadata
 - **SRT** (`outputs/audio.srt`): Standard subtitle format for video players
-- **Formatted** (`outputs/audio.formatted.txt`): Human-readable transcript with timestamps
+- **Formatted** (`outputs/audio.formatted.md`): Human-readable transcript with timestamps
 - **AI Processed** (`outputs/audio.meeting_notes.md`): AI-generated structured notes
 
 ### Custom Output Directory
 
 ```bash
 # Use different output directory
-./audia audio.m4a -o transcript.txt --output-dir my_results
+./audia audio.m4a -o transcript.md --output-dir my_results
 
 # Specify exact output path
 ./audia audio.m4a -o /path/to/specific/output
@@ -228,6 +224,33 @@ Optimized for Russian language but supports all Whisper languages:
 - German (de)
 - And 90+ other languages
 
+## 🏢 Corporate Environment Setup
+
+For corporate environments with self-signed certificates or proxy issues:
+
+### SSL Certificate Issues
+If you encounter SSL errors during model downloads:
+
+```bash
+# Option 1: CLI flag
+./audia audio.m4a -o transcript.md --no-ssl-verify
+
+# Option 2: Environment variable (persistent)
+echo "AUDIA_NO_SSL_VERIFY=true" >> .env
+./audia audio.m4a -o transcript.md
+```
+
+### Configuration in .env file
+```env
+# SSL settings for corporate environments
+AUDIA_NO_SSL_VERIFY=true
+```
+
+**Important**: 
+- Priority: `.env` file overrides CLI flag
+- Scope: Affects Lightning Whisper MLX model downloads via huggingface_hub
+- Security: SSL verification is disabled only for model downloads, not for API requests
+
 ## 🤖 AI Processing Setup
 
 Edit `config.yaml` to customize AI processing:
@@ -259,7 +282,7 @@ prompts/
 ./audia --list-prompts
 
 # Use your custom prompt
-./audia audio.m4a -o transcript.txt -p your_custom_prompt
+./audia audio.m4a -o transcript.md -p your_custom_prompt
 ```
 
 ## 🚨 Requirements

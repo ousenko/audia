@@ -925,14 +925,22 @@ class AudioTranscriptionPipeline:
         Args:
             result: Processed transcription result
             output_path: Base output path (without extension)
-            format_type: Output format ('txt', 'json', 'srt', 'all')
+            format_type: Output format ('md', 'txt', 'json', 'srt', 'formatted', 'all')
             ai_prompt_type: AI processing prompt type (meeting_notes, podcast_summary, etc.)
         """
         try:
             self.logger.info(f"Saving results to {output_path}")
             
             base_path = Path(output_path).with_suffix("")
-            
+        
+            if format_type in ["md", "all"]:
+                # Save formatted Markdown transcript (without timestamps)
+                md_path = base_path.with_suffix(".md")
+                formatted_plain_text = self._format_plain_text(result["segments"])
+                with open(md_path, "w", encoding="utf-8") as f:
+                    f.write(formatted_plain_text)
+                self.logger.info(f"Markdown transcript saved to {md_path}")
+        
             if format_type in ["txt", "all"]:
                 # Save formatted plain text transcript (without timestamps)
                 txt_path = base_path.with_suffix(".txt")

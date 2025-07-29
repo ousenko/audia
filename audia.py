@@ -130,29 +130,29 @@ def main():
 Use Cases:
 
 1. TRANSCRIPTION ONLY:
-  %(prog)s audio.m4a -o transcript.txt        # Basic Russian transcription (large-v3-turbo model)
-  %(prog)s video.mp4 -o transcript.txt        # Video transcription (auto audio extraction)
-  %(prog)s audio.m4a -o transcript.txt -m small  # Fast transcription (small model, 23x real-time)
-  %(prog)s audio.m4a -o transcript.txt -m medium # Balanced transcription (medium model, 10x real-time)
-  %(prog)s audio.m4a -o transcript.txt -l en  # English transcription
-  %(prog)s audio.m4a -o /path/to/result.txt   # Save to custom path
-  %(prog)s audio.m4a -o transcript.txt -f all # Output all formats (txt, json, srt)
+  %(prog)s audio.m4a -o transcript.md        # Basic Russian transcription (large-v3-turbo model)
+  %(prog)s video.mp4 -o transcript.md        # Video transcription (auto audio extraction)
+  %(prog)s audio.m4a -o transcript.md -m small  # Fast transcription (small model, 23x real-time)
+  %(prog)s audio.m4a -o transcript.md -m medium # Balanced transcription (medium model, 10x real-time)
+  %(prog)s audio.m4a -o transcript.md -l en  # English transcription
+  %(prog)s audio.m4a -o /path/to/result.md   # Save to custom path
+  %(prog)s audio.m4a -o transcript.md -f all # Output all formats (md, json, srt)
 
 2. TRANSCRIPTION + AI PROCESSING:
-  %(prog)s audio.m4a -o transcript.txt -p meeting_notes    # Meeting notes generation
-  %(prog)s audio.m4a -o transcript.txt -p podcast_summary # Podcast summary generation
-  %(prog)s audio.m4a -o transcript.txt -m medium -p meeting_notes # Faster transcription + AI processing
+  %(prog)s audio.m4a -o transcript.md -p meeting_notes    # Meeting notes generation
+  %(prog)s audio.m4a -o transcript.md -p podcast_summary # Podcast summary generation
+  %(prog)s audio.m4a -o transcript.md -m medium -p meeting_notes # Faster transcription + AI processing
 
 3. TRANSCRIPT POST-PROCESSING:
-  %(prog)s --process-transcript transcript.txt -p meeting_notes  # Process existing transcript
-  %(prog)s --process-transcript transcript.txt -p psy -o analysis.txt  # Custom output file
-  %(prog)s --process-transcript outputs/audio.txt -p podcast_summary  # Process previous result
+  %(prog)s --process-transcript transcript.md -p meeting_notes  # Process existing transcript
+  %(prog)s --process-transcript transcript.md -p psy -o analysis.md  # Custom output file
+  %(prog)s --process-transcript outputs/audio.md -p podcast_summary  # Process previous result
 
         """
     )
     
     parser.add_argument("input", nargs='?', help="Input audio or video file path (M4A, MP3, WAV, MP4, MOV, AVI, etc.)")
-    parser.add_argument("-o", "--output", required=True, help="Output file path (e.g., /path/to/transcript.txt)")
+    parser.add_argument("-o", "--output", required=True, help="Output file path (e.g., /path/to/transcript.md)")
     parser.add_argument("--output-dir", default="outputs", help="Output directory (default: outputs)")
     parser.add_argument("-m", "--model", default=env_vars.get('DEFAULT_MODEL', 'large-v3-turbo'), 
                        choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3", "large-v3-turbo"],
@@ -160,7 +160,7 @@ Use Cases:
     parser.add_argument("-l", "--language", default=env_vars.get('DEFAULT_LANGUAGE', 'ru'), 
                        help=f"Language code (default: {env_vars.get('DEFAULT_LANGUAGE', 'ru')}). Supports en, ru, es, etc.")
     parser.add_argument("-f", "--format", default=env_vars.get('DEFAULT_FORMAT', 'md'),
-                       choices=["txt", "json", "srt", "formatted", "all", "md"],
+                       choices=["json", "srt", "formatted", "all", "md"],
                        help=f"Output format (default: {env_vars.get('DEFAULT_FORMAT', 'md')})")
     parser.add_argument("--batch-size", type=int, default=int(env_vars.get('BATCH_SIZE', '12')),
                        help=f"Batch size for Lightning Whisper MLX processing (default: {env_vars.get('BATCH_SIZE', '12')})")
